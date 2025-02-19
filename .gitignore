@@ -1,3 +1,4 @@
 __pycache__
 config_prod.json
 venv
+positions.pkl

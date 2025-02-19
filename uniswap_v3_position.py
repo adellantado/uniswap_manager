@@ -212,3 +212,13 @@ class UniswapV3Position:
 
     def __str__(self):
         return self.name
+
+    
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['web3']
+        return state
+
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)

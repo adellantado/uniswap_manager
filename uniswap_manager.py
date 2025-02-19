@@ -1,6 +1,8 @@
-import web3_utils
 import requests
+import pickle
+import os
 from web3 import Web3
+import web3_utils
 from uniswap_v3_position import UniswapV3Position
 
 
@@ -34,13 +36,28 @@ class UniswapManager():
 
     def print_all_deposits(self, address: str):
         position_ids = self.get_all_wallet_positions(address)
+        positions = {}
+        resave_file = False
+        if os.path.exists("positions.pkl"):
+            with open("positions.pkl", "rb") as f:
+                positions = pickle.load(f)
         for position_id in position_ids:
-            position = UniswapV3Position(self.web3, self.POSITION_MANAGER, self.FACTORY, position_id, address).fetch_data(self.config["network"]["from_block"])
+            position: UniswapV3Position = positions.get(position_id, None)
+            if not position:
+                position = UniswapV3Position(self.web3, self.POSITION_MANAGER, self.FACTORY, position_id, address).fetch_data(self.config["network"]["from_block"])
+                positions[position_id] = position
+                resave_file = True
+            else:
+                position.web3 = self.web3
+                position.refresh()
             apy, position_days, total_amount, total_fees, symbol = position.calculate_position_apy()
             token_price = float(self.get_coin_price_usd(symbol))
             total_amount = total_amount * token_price
             total_fees = total_fees * token_price
             print(f"{position.name} APY: {apy:.2f}%, {position_days} days, {total_amount:.2f}$ deposit, {total_fees:.2f}$ fees")
+        if resave_file:
+            with open("positions.pkl", "wb") as f:
+                pickle.dump(positions, f)
 
 
     def get_coin_price_usd(self, symbol: str) -> str:
