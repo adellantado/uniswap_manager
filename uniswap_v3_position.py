@@ -1,15 +1,19 @@
 from __future__ import annotations
-from web3 import Web3
+
 import json
 import time
-from decimal import Decimal
-import web3_utils
 from datetime import datetime,timezone
+from decimal import Decimal
+
+from web3 import Web3
+
+import web3_utils
 
 
 class UniswapV3Position:
 
-    def __init__(self, web3: Web3, position_manager_address: str, factory_address: str, position_id: int, owner_address: str):
+    def __init__(self, web3: Web3, position_manager_address: str, factory_address: str, 
+            position_id: int, owner_address: str):
         self.web3 = web3
         self.POSITION_MANAGER = position_manager_address
         self.FACTORY = factory_address
@@ -21,7 +25,8 @@ class UniswapV3Position:
         self.position = self.get_position_contract_data()
         self.creation_date = self.get_deposit_init_date(from_block)
         self.pool_address = self.get_pool_address()
-        self.pool_data = self.get_pool_contract_data(self.position['tickLower'], self.position['tickUpper'])
+        self.pool_data = self.get_pool_contract_data(self.position['tickLower'], 
+            self.position['tickUpper'])
         token0_decimals, symbol0 = self.get_token_info(self.position['token0'])
         token1_decimals, symbol1 = self.get_token_info(self.position['token1'])
         self.token0_decimals = token0_decimals
@@ -38,7 +43,8 @@ class UniswapV3Position:
 
     def refresh(self) -> UniswapV3Position:
         self.position = self.get_position_contract_data()
-        self.pool_data = self.get_pool_contract_data(self.position['tickLower'], self.position['tickUpper'])
+        self.pool_data = self.get_pool_contract_data(self.position['tickLower'], 
+            self.position['tickUpper'])
         return self
 
 
@@ -78,7 +84,11 @@ class UniswapV3Position:
 
     def get_total_fees_collected(self) -> tuple[float, float]:
         slot0, tickLow, tickHi, feeGrowthGlobal0, feeGrowthGlobal1 = self.pool_data
-        return self._calculate_fees(feeGrowthGlobal0, feeGrowthGlobal1, tickLow['feeGrowthOutside0X128'], tickHi['feeGrowthOutside0X128'], self.position['feeGrowthInside0LastX128'], tickLow['feeGrowthOutside1X128'], tickHi['feeGrowthOutside1X128'], self.position['feeGrowthInside1LastX128'], self.position['liquidity'], self.token0_decimals, self.token1_decimals, self.position['tickLower'], self.position['tickUpper'], slot0['tick'])
+        return self._calculate_fees(feeGrowthGlobal0, feeGrowthGlobal1, tickLow['feeGrowthOutside0X128'], 
+            tickHi['feeGrowthOutside0X128'], self.position['feeGrowthInside0LastX128'], 
+            tickLow['feeGrowthOutside1X128'], tickHi['feeGrowthOutside1X128'], 
+            self.position['feeGrowthInside1LastX128'], self.position['liquidity'], self.token0_decimals, 
+            self.token1_decimals, self.position['tickLower'], self.position['tickUpper'], slot0['tick'])
 
 
     def get_total_locked_amount(self) -> tuple[float, float]:
@@ -87,7 +97,8 @@ class UniswapV3Position:
         sqrt_price_lower_x96 = 1.0001 ** (self.position['tickLower'] / 2) * (2**96)
         sqrt_price_upper_x96 = 1.0001 ** (self.position['tickUpper'] / 2) * (2**96)
         # Calculate amounts
-        amount0, amount1 = self._calculate_amounts(self.position['liquidity'], slot0['sqrtPriceX96'], sqrt_price_upper_x96, sqrt_price_lower_x96)
+        amount0, amount1 = self._calculate_amounts(self.position['liquidity'], slot0['sqrtPriceX96'], 
+            sqrt_price_upper_x96, sqrt_price_lower_x96)
         token0_amount = amount0/10**self.token0_decimals
         token1_amount = amount1/10**self.token1_decimals
         return token0_amount, token1_amount
@@ -105,14 +116,17 @@ class UniswapV3Position:
 
         date_diff = (datetime.now(timezone.utc) - self.creation_date)
         years_portion = 365*24*60*60/date_diff.total_seconds()
-        apy = total_fees / total_amount * years_portion * 100
+        apy = 0
+        if total_amount != 0:
+            apy = total_fees / total_amount * years_portion * 100
         return apy, date_diff.days, total_amount, total_fees, self.symbol1
 
 
     def get_pool_address(self) -> str:
         factory_abi = web3_utils.load_abi("UniswapFactory")
         factory_contract = self.web3.eth.contract(address=self.FACTORY, abi=factory_abi)
-        pool_address = factory_contract.functions.getPool(self.position['token0'], self.position['token1'], self.position['fee']).call()
+        pool_address = factory_contract.functions.getPool(self.position['token0'], 
+            self.position['token1'], self.position['fee']).call()
         return pool_address
 
 
@@ -156,7 +170,8 @@ class UniswapV3Position:
         return decimals_token, symbol
 
 
-    def _calculate_amounts(self, liquidity, sqrt_price_x96, sqrt_price_upper_x96, sqrt_price_lower_x96) -> tuple[float, float]:
+    def _calculate_amounts(self, liquidity, sqrt_price_x96, sqrt_price_upper_x96, 
+            sqrt_price_lower_x96) -> tuple[float, float]:
         liquidity = Decimal(liquidity)
         sqrt_price = Decimal(sqrt_price_x96) / (2**96)
         sqrt_price_upper = Decimal(sqrt_price_upper_x96) / (2**96)
@@ -176,7 +191,9 @@ class UniswapV3Position:
         return float(amount0), float(amount1)
 
 
-    def _calculate_fees(self, feeGrowthGlobal0, feeGrowthGlobal1, feeGrowth0Low, feeGrowth0Hi, feeGrowthInside0, feeGrowth1Low, feeGrowth1Hi, feeGrowthInside1, liquidity, decimals0, decimals1, tickLower, tickUpper, tickCurrent) -> tuple[float, float]:
+    def _calculate_fees(self, feeGrowthGlobal0, feeGrowthGlobal1, feeGrowth0Low, feeGrowth0Hi, 
+            feeGrowthInside0, feeGrowth1Low, feeGrowth1Hi, feeGrowthInside1, liquidity, decimals0, 
+            decimals1, tickLower, tickUpper, tickCurrent) -> tuple[float, float]:
         feeGrowthGlobal_0 = Decimal(feeGrowthGlobal0)
         feeGrowthGlobal_1 = Decimal(feeGrowthGlobal1)
         tickLowerFeeGrowthOutside_0 = Decimal(feeGrowth0Low)
@@ -216,7 +233,8 @@ class UniswapV3Position:
     
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['web3']
+        if state.get('web3', None):
+            del state['web3']
         return state
 
 

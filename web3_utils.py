@@ -1,5 +1,6 @@
-from web3 import Web3
 import json
+
+from web3 import Web3
 
 
 def load_abi(abi_name: str) -> dict:

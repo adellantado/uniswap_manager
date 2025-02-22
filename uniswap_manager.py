@@ -1,7 +1,9 @@
 import requests
 import pickle
 import os
+
 from web3 import Web3
+
 import web3_utils
 from uniswap_v3_position import UniswapV3Position
 
@@ -18,8 +20,7 @@ class UniswapManager():
     def fetch_positions(self):
         for title, address in self.config["wallet"]["addresses"].items():
             print(f"Wallet: {title}")
-            self.print_all_deposits(address)
-            print("---------------------------------------")
+            self.print_all_deposits(Web3.to_checksum_address(address))
 
 
     def get_all_wallet_positions(self, owner_address: str) -> list[int]:
@@ -44,7 +45,8 @@ class UniswapManager():
         for position_id in position_ids:
             position: UniswapV3Position = positions.get(position_id, None)
             if not position:
-                position = UniswapV3Position(self.web3, self.POSITION_MANAGER, self.FACTORY, position_id, address).fetch_data(self.config["network"]["from_block"])
+                position = UniswapV3Position(self.web3, self.POSITION_MANAGER, self.FACTORY, 
+                    position_id, address).fetch_data(self.config["network"]["from_block"])
                 positions[position_id] = position
                 resave_file = True
             else:
@@ -55,6 +57,7 @@ class UniswapManager():
             total_amount = total_amount * token_price
             total_fees = total_fees * token_price
             print(f"{position.name} APY: {apy:.2f}%, {position_days} days, {total_amount:.2f}$ deposit, {total_fees:.2f}$ fees")
+            print("---------------------------------------")
         if resave_file:
             with open("positions.pkl", "wb") as f:
                 pickle.dump(positions, f)
