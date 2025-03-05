@@ -1,0 +1,32 @@
+{
+    "network": {
+        "rpc": "http://127.0.0.1:8545/",
+        "explorer": "https://etherscan.io",
+        "from_block": 21747951
+    },
+
+    "uniswap": {
+        "contracts": {
+            "position_manager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+            "factory": "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+            "router": "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+        }
+    },
+
+    "wallet": {
+        "addresses": {
+            "test_addr": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+        },
+        "keys": {
+            "test_addr": "keys/fork.private_key"
+        }
+    },
+
+    "ERC20": {
+        "tokens": {
+            "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            "WETH": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        }
+    }
+
+}
