@@ -23,15 +23,18 @@ def balance(wallet, erc20, all):
     @to_checksum_address(0,1)
     def get_balance_rec(address, erc20, all):
         if all:
+            erc20_tokens_to_check = config['wallet']['erc20']['active']
             if address:
                 get_balance_rec(address, None, False)
-                for token_name, token_address in config['ERC20']['tokens'].items():
+                for token_name in erc20_tokens_to_check:
+                    token_address = utils.get_token_address(token_name)
                     get_balance_rec(address, token_address, False)
             else:
                 for wallet_alias, wallet_address in config['wallet']['addresses'].items():
                     click.echo(f'Wallet: {wallet_alias}')
                     get_balance_rec(wallet_address, None, False)
-                    for token_name, token_address in config['ERC20']['tokens'].items():
+                    for token_name in erc20_tokens_to_check:
+                        token_address = utils.get_token_address(token_name)
                         get_balance_rec(wallet_address, token_address, False)
             return
         if address and erc20:

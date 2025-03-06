@@ -18,7 +18,7 @@ def get_gas_price(etherscan_key: str) -> tuple[int, int, int]:
     return safe_gas, propose_gas, fast_gas
 
 def get_config() -> dict:
-    with open("config/fork.config.json", "r") as f:
+    with open("config/config.json", "r") as f:
         config = json.load(f)
     return config
 
