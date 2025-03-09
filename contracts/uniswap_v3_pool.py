@@ -3,6 +3,7 @@ import enum
 
 from .contract import Contract
 from .erc20 import ERC20
+from utils.decorators import cache
 import utils.web3_utils as web3_utils
 
 
@@ -40,12 +41,15 @@ class UniswapV3Pool(Contract):
     def get_feeGrowthGlobal1X128(self) -> int:
         return self.call_view_func('feeGrowthGlobal1X128')
 
+    @cache("contracts")
     def get_token0_address(self) -> str:
         return self.call_view_func('token0')
 
+    @cache("contracts")
     def get_token1_address(self) -> str:
         return self.call_view_func('token1')
 
+    @cache("contracts")
     def get_fee_tier(self) -> int:
         return self.call_view_func('fee')
 

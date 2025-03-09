@@ -4,9 +4,10 @@ from typing import Any
 from web3 import Web3
 
 import utils.web3_utils as web3_utils
+from entity.cachable import Cachable
 
 
-class Contract():
+class Contract(Cachable):
 
     web3: Web3 = None 
 
@@ -45,3 +46,8 @@ class Contract():
     def get_tx_receipt(self, tx_hash):
         return self.web3.eth.wait_for_transaction_receipt(tx_hash)
 
+    def __eq__(self, other: Contract):
+        return self.contract_address == other.contract_address
+
+    def get_hash(self):
+        return self.contract_address

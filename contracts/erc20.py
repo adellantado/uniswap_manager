@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from .contract import Contract
 import utils.web3_utils as web3_utils
-from utils.decorators import to_checksum_address
+from utils.decorators import to_checksum_address, cache
 
 
 class ERC20(Contract):
@@ -26,9 +26,11 @@ class ERC20(Contract):
     def get_balance(self, wallet_address: str) -> int:
         return self.call_view_func('balanceOf', wallet_address)
 
+    @cache("contracts")
     def get_decimals(self) -> int:
         return self.call_view_func('decimals')
 
+    @cache("contracts")
     def get_symbol(self) -> str:
         return self.call_view_func('symbol')
 

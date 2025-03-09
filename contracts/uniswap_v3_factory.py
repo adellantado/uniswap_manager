@@ -20,6 +20,7 @@ class UniswapV3Factory(Contract):
         return UniswapV3Factory.instance
 
     @to_checksum_address(1,2)
+    @cache("contracts")
     def get_pool_address(self, token0_address: str, token1_address: str, fee_tier: int) -> str:
         return self.call_view_func('getPool', token0_address, token1_address, fee_tier)
 
