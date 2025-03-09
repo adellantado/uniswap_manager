@@ -3,6 +3,7 @@ from __future__ import annotations
 from .contract import Contract
 from .erc20 import ERC20
 from .uniswap_v3_pool import UniswapV3Pool
+from utils.decorators import cache
 from utils.decorators import to_checksum_address
 
 

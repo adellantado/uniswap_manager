@@ -2,7 +2,8 @@
     "network": {
         "rpc": "http://127.0.0.1:8545/",
         "explorer": "https://etherscan.io",
-        "from_block": 21747951
+        "from_block": 21747951,
+        "prod": false
     },
 
     "uniswap": {

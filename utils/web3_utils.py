@@ -6,7 +6,10 @@ import utils.utils as utils
 
 
 def get_web3(config: dict) -> Web3:
-    return Web3(Web3.HTTPProvider(config["network"]["rpc"]))
+    is_prod = config["network"].get("prod", True)
+    return Web3(Web3.HTTPProvider(config["network"]["rpc"], 
+        cache_allowed_requests = not is_prod)
+    )
 
 def load_abi(abi_name: str) -> dict:
     with open(f"abi/{abi_name}.json") as f:
