@@ -8,6 +8,38 @@ from entity.cachable import Cachable
 
 
 class Contract(Cachable):
+    """
+    Contract class for interacting with Ethereum smart contracts using Web3.py.
+
+    Attributes:
+        web3 (Web3): An instance of Web3.
+        contract_instances (dict[str, Contract]): A dictionary to store contract instances.
+
+    Methods:
+        __init__(contract_address: str, abi_path: str):
+            Initializes the Contract instance with the given contract address and ABI path.
+        
+        sync(num_of_calls: int=1) -> Contract:
+            Sets the number of calls to sync and returns the Contract instance.
+        
+        call_view_func(contract_function: str, *args) -> Any:
+            Calls a view function on the contract and caches the result.
+        
+        set_nonce(nonce: int) -> Contract:
+            Sets the nonce for transactions and returns the Contract instance.
+        
+        get_nonce(wallet_address: str) -> int:
+            Gets the nonce for the given wallet address.
+        
+        sign_and_send_tx(tx, wallet: str):
+            Signs and sends a transaction using the given wallet.
+        
+        get_tx_receipt(tx_hash):
+            Gets the transaction receipt for the given transaction hash.
+        
+        get_hash():
+            Returns the contract address as the hash.
+    """
 
     web3: Web3 = None 
 

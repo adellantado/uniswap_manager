@@ -4,6 +4,33 @@ import os
 
 
 class PickleCache():
+    """
+    A class used to manage caching using pickle serialization.
+
+    Attributes
+    ----------
+    file_name : str
+        The name of the file where the cache is stored.
+    cache : dict
+        The dictionary that holds the cached data.
+
+    Methods
+    -------
+    has(key)
+        Checks if the cache contains the given key.
+    get(key)
+        Retrieves the value associated with the given key from the cache.
+    set(key, value)
+        Sets the value for the given key in the cache and persists it.
+    clear()
+        Clears all the data in the cache.
+    get_instance(name: str) -> PickleCache
+        Returns a singleton instance of PickleCache for the given name.
+    _fetch()
+        Loads the cache from the pickle file if it exists.
+    _persist()
+        Persists the current cache to the pickle file.
+    """
 
     _instances = {}
 

@@ -8,6 +8,30 @@ import utils.web3_utils as web3_utils
 
 
 class UniswapV3Pool(Contract):
+    """
+    UniswapV3Pool is a class that represents a Uniswap V3 Pool contract.
+    Methods:
+        get_pool_price(token1_adjusted: bool = False) -> float:
+            Returns the current price of the pool. If token1_adjusted is True, the price is adjusted for token1 decimals.
+        get_slot0() -> dict:
+            Returns the slot0 data from the contract.
+        get_ticks(tick: int) -> dict:
+            Returns the tick data for the given tick index.
+        get_feeGrowthGlobal0X128() -> int:
+            Returns the global fee growth for token0.
+        get_feeGrowthGlobal1X128() -> int:
+            Returns the global fee growth for token1.
+        get_token0_address() -> str:
+            Returns the address of token0.
+        get_token1_address() -> str:
+            Returns the address of token1.
+        get_fee_tier() -> int:
+            Returns the fee tier of the pool.
+        get_token0() -> ERC20:
+            Returns an instance of the ERC20 token0.
+        get_token1() -> ERC20:
+            Returns an instance of the ERC20 token1.
+    """
 
     def __init__(self, contract_address: str):
         super().__init__(contract_address, "UniswapV3Pool")

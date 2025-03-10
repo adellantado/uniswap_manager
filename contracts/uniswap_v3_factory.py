@@ -8,6 +8,19 @@ from utils.decorators import to_checksum_address
 
 
 class UniswapV3Factory(Contract):
+    """
+    UniswapV3Factory is a class that represents the Uniswap V3 Factory contract.
+
+    Attributes:
+        instance (UniswapV3Factory): A singleton instance of the UniswapV3Factory class.
+
+    Methods:
+        get_pool_address(token0_address: str, token1_address: str, fee_tier: int) -> str:
+            Returns the address of the pool for the given token addresses and fee tier.
+        
+        get_pool(token0_address: str, token1_address: str, fee_tier: int) -> UniswapV3Pool:
+            Returns an instance of the UniswapV3Pool class for the given token addresses and fee tier.
+    """
 
     instance: UniswapV3Factory = None 
 

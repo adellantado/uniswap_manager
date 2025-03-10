@@ -7,6 +7,16 @@ from utils.decorators import to_checksum_address
 
 
 class UniswapV3Router(Contract):
+    """
+    UniswapV3Router is a class that interacts with the Uniswap V3 Router contract to perform token swaps.
+
+    Methods:
+        swap_out_min(in_token_address, out_token_address, in_token_amount, out_token_amount_min, fee_tier, wallet_address):
+            Creates a transaction to swap a minimum amount of output tokens for a given input token amount.
+        
+        swap_in_max(in_token_address, out_token_address, in_token_amount_min, out_token_amount, fee_tier, wallet_address):
+            Creates a transaction to swap a maximum amount of input tokens for a given output token amount.
+    """
 
     instance: UniswapV3Router = None 
 

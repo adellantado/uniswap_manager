@@ -11,6 +11,46 @@ from utils.decorators import to_checksum_address
 
 
 class UniswapV3PositionManager(Contract):
+    """
+    UniswapV3PositionManager is a class that manages Uniswap V3 positions.
+
+    Methods:
+        get_position_data(position_id: int) -> dict:
+            Retrieves data for a specific position by its ID.
+
+        get_all_position_last_index(wallet_address: str) -> int:
+            Returns the last index of all positions for a given wallet address.
+
+        get_token_id_by_index(wallet_address: str, index: int) -> int:
+            Returns the token ID at a specific index for a given wallet address.
+
+        get_position_ids(wallet_address: str) -> list[int]:
+            Returns a list of all position IDs for a given wallet address.
+
+        get_position_id(token0_address: str, token1_address: str, fee_tier: int, wallet_address: str):
+            Retrieves the position ID for a given token pair, fee tier, and wallet address.
+
+        collect_all(wallet_address: str, position_id: int):
+            Collects all fees for a given position ID and wallet address.
+
+        decrease_liquidity(position_id: int, liquidity: int, wallet_address: str):
+            Decreases liquidity for a given position ID and wallet address.
+
+        increase_liquidity(position_id: int, amount0_desired: int, amount1_desired: int, wallet_address: str):
+            Increases liquidity for a given position ID and wallet address.
+
+        open_position_for_pool(pool: UniswapV3Pool, amount0_desired: int, amount1_desired: int, 
+                               amount0_min: int, amount1_min: int, wallet_address: str, deviation_percent: int=15):
+            Opens a new position for a given pool with specified parameters.
+
+        open_position(token0_address: str, token1_address: str, fee_tier: int, amount0_desired: int, 
+                      amount1_desired: int, amount0_min: int, amount1_min: int, tick_lower: int, 
+                      tick_upper: int, wallet_address: str):
+            Opens a new position with specified parameters.
+
+        get_ticks(pool: UniswapV3Pool, deviation_percent: int):
+            Calculates the lower and upper ticks for a given pool and deviation percentage.
+    """
 
     instance: UniswapV3PositionManager = None 
 
@@ -41,6 +81,17 @@ class UniswapV3PositionManager(Contract):
             position_ids.append(self.get_token_id_by_index(wallet_address, i))
         return position_ids
 
+    def get_position_id(self, token0_address: str, token1_address: str, fee_tier: int, 
+            wallet_address: str):
+        position_ids = self.get_position_ids(wallet_address)
+        for position_id in position_ids:
+            position_data = self.get_position_data(position_id)
+            if (position_data["token0"] == token0_address 
+                and position_data["token1"] == token1_address 
+                and position_data["fee"] == fee_tier):
+                return position_id
+        return None
+
     @to_checksum_address(1)
     def collect_all(self, wallet_address: str, position_id: int):
         tx = self.contract.functions.collect({
@@ -54,13 +105,6 @@ class UniswapV3PositionManager(Contract):
             "gasPrice": web3_utils.get_gas_price(self.web3),
             "gas": 200000,
         })
-        # tx_hash = web3_utils.sign_and_send_tx(web3, tx)
-        # receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-        # print("Transaction confirmed in block:", receipt["blockNumber"])
-        # for log in receipt.logs:
-        #     if log.address.lower() == config['uniswap']['contracts']['position_manager'].lower():
-        #         print("Collected Fees Log:", log)
-
 
     @to_checksum_address(3)
     def decrease_liquidity(self, position_id: int, liquidity: int, wallet_address: str):
@@ -125,7 +169,7 @@ class UniswapV3PositionManager(Contract):
             "amount0Min": amount0_min,
             "amount1Min": amount1_min,
             "recipient": wallet_address,
-            "deadline": web3_utils.get_tx_deadline(),
+            "deadline": web3_utils.get_tx_deadline(self.web3),
         }).build_transaction({
             "from": wallet_address,
             "nonce": self.get_nonce(wallet_address),

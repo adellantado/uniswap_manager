@@ -6,6 +6,13 @@ from utils.decorators import to_checksum_address
 
 
 class WETH9(Contract):
+    """
+    WETH9 is a class that represents the WETH9 contract.
+
+    Methods:
+        deposit(wallet_address: str, amount: int):
+            Builds a transaction to deposit the specified amount of ETH into the WETH9 contract from the given wallet address.
+    """
 
     instance: WETH9 = None 
 

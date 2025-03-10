@@ -12,6 +12,45 @@ import utils.web3_utils as web3_utils
 
 
 class UniswapV3Position():
+    """
+    Represents a position in Uniswap V3.
+    Attributes:
+        position_manager (UniswapV3PositionManager): The position manager instance.
+        web3 (Web3): The Web3 instance.
+        position_id (int): The ID of the position.
+        wallet_address (str): The wallet address associated with the position.
+        position_data (dict): The data related to the position.
+        pool (UniswapV3Pool): The pool associated with the position.
+        creation_date (datetime): The creation date of the position.
+    Methods:
+        name:
+            Returns the name of the position.
+        refresh():
+            Refreshes the position data.
+        get_token0():
+            Returns the token0 of the pool.
+        get_token1():
+            Returns the token1 of the pool.
+        get_deposit_init_date(from_block, chunk_size=5000):
+            Returns the initial deposit date of the position.
+        get_total_fees_collected():
+            Returns the total fees collected by the position.
+        get_total_locked_amount():
+            Returns the total locked amount in the position.
+        calculate_position_apy():
+            Calculates the APY of the position.
+        is_closed():
+            Checks if the position is closed.
+        is_active():
+            Checks if the position is active.
+        get_price_range():
+            Returns the price range of the position.
+        _calculate_amounts(liquidity, sqrt_price_x96, sqrt_price_upper_x96, sqrt_price_lower_x96):
+            Calculates the amounts of token0 and token1.
+        _calculate_fees(fee_growth_global0, fee_growth_global1, fee_growth0_low, fee_growth0_high, 
+                        fee_growth1_low, fee_growth1_high, fee_growth_inside0, fee_growth_inside1, 
+                        liquidity, decimals0, decimals1, tick_lower, tick_upper, tick_current):
+    """
 
     def __init__(self, position_id: int, wallet_address: str, 
             position_data: dict, position_manager: UniswapV3PositionManager,

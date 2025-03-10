@@ -7,6 +7,28 @@ from utils.decorators import to_checksum_address, cache
 
 
 class ERC20(Contract):
+    """
+    ERC20 class for interacting with ERC20 token contracts.
+
+    Methods:
+        get_instance(token_address: str) -> ERC20:
+            Returns an instance of the ERC20 contract for the given token address.
+
+        get_allowance(owner_address: str, spender_address: str) -> int:
+            Returns the allowance of the spender for the owner's tokens.
+
+        get_balance(wallet_address: str) -> int:
+            Returns the balance of the given wallet address.
+
+        get_decimals() -> int:
+            Returns the number of decimals used by the token.
+
+        get_symbol() -> str:
+            Returns the symbol of the token.
+
+        approve(wallet_address: str, spender_address: str, amount: int):
+            Approves the spender to spend the specified amount of tokens from the wallet address.
+    """
 
     def __init__(self, token_address: str):
         super().__init__(token_address, "ERC20")

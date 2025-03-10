@@ -2,9 +2,10 @@ import click
 
 from contracts.erc20 import ERC20
 from manager.balance_manager import BalanceManager
-from manager.uniswap_manager import UniswapManager
+from manager.uniswap_manager import UniswapManager, UniswapManagerError
 import utils.utils as utils
 import utils.web3_utils as web3_utils
+import utils.cli_utils as cli_utils
 from utils.decorators import to_checksum_address
 
 
@@ -84,43 +85,57 @@ def price(symbol):
 @click.argument('in_token')
 @click.argument('out_token')
 @click.argument('wallet')
-@click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate fee tier")
+@click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
 @click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
 def swap(in_token, out_token, wallet, estimate, send):
-    address = utils.get_wallet_address(wallet)
-    manager = UniswapManager(utils.get_config())
+    wallet_address = utils.get_wallet_address(wallet)
+    try:
+        manager = UniswapManager(utils.get_config())
+        _, in_erc20, _, in_native_amount = cli_utils.split_token_amount(in_token)
+        _, out_erc20, _, out_native_amount = cli_utils.split_token_amount(out_token)
+        manager.swap(in_erc20, out_erc20, in_native_amount, out_native_amount, wallet_address, 
+            False if estimate else send
+        )
+    except UniswapManagerError as e:
+        click.echo(str(e))
+        exit(1)
 
-    in_amount = 0
-    if '=' in in_token:
-        in_token, in_amount = in_token.split('=')
-        in_amount = float(in_amount.strip())
-        in_token = in_token.strip()
-    if in_token.upper() == 'ETH':
-        in_token = 'WETH'
-    in_token_address = utils.get_token_address(in_token)
+@click.command("open-position", help="Open position")
+@click.argument('token1')
+@click.argument('token2')
+@click.argument('fee_tier')
+@click.argument('wallet')
+@click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
+@click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
+def open_position(token1, token2, fee_tier, wallet, estimate, send):
+    wallet_address = utils.get_wallet_address(wallet)
+    try:
+        manager = UniswapManager(utils.get_config())
+        _, token1_erc20, _, token1_native_amount = cli_utils.split_token_amount(token1)
+        _, token2_erc20, _, token2_native_amount = cli_utils.split_token_amount(token2)
+        manager.open_position(token1_erc20, token2_erc20, token1_native_amount, token2_native_amount, 
+            int(fee_tier), wallet_address, False if estimate else send
+        )
+    except UniswapManagerError as e:
+        click.echo(str(e))
+        exit(1)
 
-    out_amount = 0
-    if '=' in out_token:
-        out_token, out_amount = out_token.split('=')
-        out_amount = float(out_amount.strip())
-        out_token = out_token.strip()
-    if out_token.upper() == 'ETH':
-        out_token = 'WETH'
-    out_token_address = utils.get_token_address(out_token)
+@click.command(help="Prints network info")
+def net():
+    config = utils.get_config()
+    web3 = web3_utils.get_web3(config)
+    click.echo(f"Connection: {'🟢 Connected' if web3.is_connected() else '🔴 No connection'}")
+    click.echo(f"Gas price: {web3.from_wei(web3.eth.gas_price, 'gwei'):.2f} Gwei")
+    click.echo(f"Chain ID: {web3.eth.chain_id}")
+    click.echo(f"Web3 version: {web3.api}")
+    click.echo(f"Client version: {web3.client_version}")
 
-    in_erc20 = ERC20.get_instance(in_token_address)
-    out_erc20 = ERC20.get_instance(out_token_address)
-
-    in_amount = int(in_amount * 10**in_erc20.get_decimals())
-    out_amount = int(out_amount * 10**out_erc20.get_decimals())
-
-    manager.swap(in_erc20, out_erc20, in_amount, out_amount, address, False if estimate else send)
-
-
+cli.add_command(net)
 cli.add_command(balance)
 cli.add_command(positions)
 cli.add_command(price)
 cli.add_command(swap)
+cli.add_command(open_position)
 
 
 if __name__ == '__main__':
