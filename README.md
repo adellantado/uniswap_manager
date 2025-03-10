@@ -72,3 +72,25 @@ Options:
   -s, --send      Sing and send transactions
   --help          Show this message and exit.
 ```
+
+### 5. Open position
+```
+Usage: bum open-position [OPTIONS] TOKEN1 TOKEN2 FEE_TIER WALLET
+
+  Open position
+
+Options:
+  -e, --estimate  Estimate transactions
+  -s, --send      Sing and send transactions
+  --help          Show this message and exit.
+```
+
+### 6. Show network info
+```
+Usage: bum net [OPTIONS]
+
+  Prints network info
+
+Options:
+  --help  Show this message and exit.
+```
