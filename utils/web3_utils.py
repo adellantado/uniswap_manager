@@ -54,4 +54,4 @@ def get_gas_price(web3: Web3):
     return base_fee
 
 def get_eth_balance(web3: Web3, address: str) -> float:
-        return web3.eth.get_balance(web3.to_checksum_address(address))
+    return web3.eth.get_balance(web3.to_checksum_address(address))

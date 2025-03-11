@@ -94,3 +94,19 @@ Usage: bum net [OPTIONS]
 Options:
   --help  Show this message and exit.
 ```
+
+## Encoding private keys
+
+Good practice is to encode private keys with `gpg` and provide `config.json` with paths of encoded keys `.gpg` or `.asc` extensions. 
+
+example:
+
+```
+"keys": {
+  "lpacc": "keys/private_key1.gpg",
+  "eth1": "keys/private_key2.asc"
+}
+```
+
+By providing keys with these extensions in the `config.json` the script will call local `gpg` with pass phrase promting to allow any signing activity.   
+You can encode your keys with GPA, Kleopatra or similar apps.
