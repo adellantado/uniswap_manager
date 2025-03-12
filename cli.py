@@ -1,3 +1,4 @@
+from web3.exceptions import ContractLogicError
 import click
 
 from contracts.erc20 import ERC20
@@ -100,7 +101,7 @@ def swap(in_token, out_token, wallet, estimate, send):
         click.echo(str(e))
         exit(1)
 
-@click.command("open-position", help="Open position")
+@click.command("open-position", help="Open Uniswap V3 position")
 @click.argument('token1')
 @click.argument('token2')
 @click.argument('fee_tier')
@@ -130,12 +131,48 @@ def net():
     click.echo(f"Web3 version: {web3.api}")
     click.echo(f"Client version: {web3.client_version}")
 
+@click.command(help="Send ETH/ERC20 tokens to another wallet e.g.(bum send ETH=0.1 <wallet_alias> <wallet_address>)")
+@click.argument('token')
+@click.argument('wallet_from')
+@click.argument('wallet_to')
+@click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
+@click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
+def send(token, wallet_from, wallet_to, estimate, send):
+    wallet_from_address = utils.get_wallet_address(wallet_from)
+    wallet_to_address = utils.get_wallet_address(wallet_to)
+    try:
+        manager = BalanceManager(utils.get_config())
+        if token[:3].upper() == 'ETH':
+            _, amount = cli_utils.split_coin_name_and_amount(token)
+            if amount == 0:
+                print("Amount can't be 0")
+                exit(1)
+            balance = manager.get_eth_balance(wallet_from_address)
+            if balance < amount:
+                print(f"Insufficient balance. Available: {balance} ETH")
+                exit(1)
+            manager.send_eth(wallet_from_address, wallet_to_address, amount, False if estimate else send)
+        else:
+            _, erc20, _, native_amount = cli_utils.split_token_amount(token)
+            if native_amount == 0:
+                print("Amount can't be 0")
+                exit(1)
+            balance, decimals, symbol = manager.get_token_balance(wallet_from_address, erc20.contract_address)
+            if balance < native_amount:
+                print(f"Insufficient balance. Available: {balance/10**decimals:.2f} {symbol}")
+                exit(1)
+            manager.send_token(wallet_from_address, wallet_to_address, erc20, native_amount, False if estimate else send)
+    except ContractLogicError as e:
+        click.echo(str(e))
+        exit(1)
+
 cli.add_command(net)
 cli.add_command(balance)
 cli.add_command(positions)
 cli.add_command(price)
 cli.add_command(swap)
 cli.add_command(open_position)
+cli.add_command(send)
 
 
 if __name__ == '__main__':

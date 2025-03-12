@@ -15,6 +15,16 @@
 
 ## Commands
 
+```
+  balance        Prints balance of ETH/ERC20 token for addresses in the...
+  net            Prints network info
+  open-position  Open Uniswap V3 position
+  positions      Prints Uniswap V3 positions for addresses in the config
+  price          Prints Binance price of a given coin in USD
+  send           Send ETH/ERC20 tokens to another wallet 
+  swap           Swap ERC20 tokens using Uniswap V3.
+```
+
 ### 1. Wallet balance
 
 ```
@@ -93,6 +103,19 @@ Usage: bum net [OPTIONS]
 
 Options:
   --help  Show this message and exit.
+```
+
+### 7. Send crypto
+```
+Usage: bum send [OPTIONS] TOKEN WALLET_FROM WALLET_TO
+
+  Send ETH/ERC20 tokens to another wallet e.g.(bum send ETH=0.1 <wallet_alias>
+  <wallet_address>)
+
+Options:
+  -e, --estimate  Estimate transactions
+  -s, --send      Sing and send transactions
+  --help          Show this message and exit.
 ```
 
 ## Encoding private keys

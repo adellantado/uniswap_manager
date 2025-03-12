@@ -1,8 +1,11 @@
 from web3 import Web3
+from web3.exceptions import ContractLogicError  
 
 from contracts.contract import Contract
 from contracts.erc20 import ERC20
 import utils.web3_utils as web3_utils
+import utils.utils as utils
+from utils.decorators import to_checksum_address
 
 
 class BalanceManager:
@@ -32,3 +35,56 @@ class BalanceManager:
         decimals = contract.get_decimals()
         symbol = contract.get_symbol()
         return balance, decimals, symbol
+    
+    @to_checksum_address(1,2)
+    def send_eth(self, wallet_address: str, receiver_address: str, amount: float, send: bool = False):
+        tx = {
+            "to": receiver_address,
+            "value": int(amount*10**18),
+            "gas": 21000,
+            "nonce": self.web3.eth.get_transaction_count(wallet_address),
+            "gasPrice": web3_utils.get_gas_price(self.web3),
+        }
+        if send:
+            tx_hash = web3_utils.sign_and_send_tx(self.web3, tx, wallet_address)
+        else:
+            gas_price = web3_utils.get_gas_price(self.web3)
+            eth_price = float(utils.get_coin_price_usd("ETH"))
+            try:
+                print(f"Transfer {amount} ETH to {receiver_address}")
+                gas_units = web3_utils.estimate_tx_gas(self.web3, tx)
+                print(
+                    "Gas price",
+                    self.web3.from_wei(gas_price, "gwei"),
+                    "Gwei",
+                    "Gas=",
+                    self.web3.from_wei(gas_price * gas_units, "gwei"),
+                    "Gwei",
+                    f"{gas_price*gas_units*eth_price/10**18:.2f}",
+                    "$",
+                )
+            except ContractLogicError as e:
+                print("error: can't estimate gas") 
+    
+    def send_token(self, wallet_address: str, receiver_address: str, token: ERC20, amount: int, send: bool = False):
+        tx = token.transfer(wallet_address, receiver_address, amount)
+        if send:
+            tx_hash = web3_utils.sign_and_send_tx(self.web3, tx, wallet_address)
+        else:
+            gas_price = web3_utils.get_gas_price(self.web3)
+            eth_price = float(utils.get_coin_price_usd("ETH"))
+            try:
+                print(f"Transfer {amount} {token.get_symbol()} to {receiver_address}")
+                gas_units = web3_utils.estimate_tx_gas(self.web3, tx)
+                print(
+                    "Gas price",
+                    self.web3.from_wei(gas_price, "gwei"),
+                    "Gwei",
+                    "Gas=",
+                    self.web3.from_wei(gas_price * gas_units, "gwei"),
+                    "Gwei",
+                    f"{gas_price*gas_units*eth_price/10**18:.2f}",
+                    "$",
+                )
+            except ContractLogicError as e:
+                print("error: can't estimate gas") 

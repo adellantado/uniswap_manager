@@ -28,6 +28,9 @@ class ERC20(Contract):
 
         approve(wallet_address: str, spender_address: str, amount: int):
             Approves the spender to spend the specified amount of tokens from the wallet address.
+
+        transfer(wallet_address: str, to_address: str, amount: int):
+            Sends the specified amount of tokens from the wallet address to the recipient address.
     """
 
     def __init__(self, token_address: str):
@@ -65,3 +68,11 @@ class ERC20(Contract):
         })
         return tx
     
+    @to_checksum_address(1,2)
+    def transfer(self, wallet_address: str, to_address: str, amount: int):
+        tx = self.contract.functions.transfer(to_address, amount).build_transaction({
+            "nonce": self.get_nonce(wallet_address),
+            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gas": 100000,
+        })
+        return tx
