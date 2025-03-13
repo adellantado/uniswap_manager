@@ -9,7 +9,6 @@ import utils.web3_utils as web3_utils
 from utils.decorators import to_checksum_address
 
 
-
 class UniswapV3PositionManager(Contract):
     """
     UniswapV3PositionManager is a class that manages Uniswap V3 positions.
@@ -50,6 +49,9 @@ class UniswapV3PositionManager(Contract):
 
         get_ticks(pool: UniswapV3Pool, deviation_percent: int):
             Calculates the lower and upper ticks for a given pool and deviation percentage.
+
+        burn(position_id: int, wallet_address: str):
+            Burns a position for a given position ID and wallet address.
     """
 
     instance: UniswapV3PositionManager = None 
@@ -82,7 +84,7 @@ class UniswapV3PositionManager(Contract):
         return position_ids
 
     def get_position_id(self, token0_address: str, token1_address: str, fee_tier: int, 
-            wallet_address: str):
+            wallet_address: str) -> int | None:
         position_ids = self.get_position_ids(wallet_address)
         for position_id in position_ids:
             position_data = self.get_position_data(position_id)
@@ -105,6 +107,7 @@ class UniswapV3PositionManager(Contract):
             "gasPrice": web3_utils.get_gas_price(self.web3),
             "gas": 200000,
         })
+        return tx
 
     @to_checksum_address(3)
     def decrease_liquidity(self, position_id: int, liquidity: int, wallet_address: str):
@@ -113,13 +116,14 @@ class UniswapV3PositionManager(Contract):
             "liquidity": liquidity,
             "amount0Min": 0,  # Set minimums to avoid slippage
             "amount1Min": 0,
-            "deadline": web3.eth.get_block("latest")["timestamp"] + 600  # 10-minute deadline
+            "deadline": web3_utils.get_tx_deadline(self.web3),
         }).build_transaction({
             "from": wallet_address,
             "nonce": self.get_nonce(wallet_address),
             "gasPrice": web3_utils.get_gas_price(self.web3),
             "gas": 250000,
         })
+        return tx
 
     @to_checksum_address(4)
     def increase_liquidity(self, position_id: int, 
@@ -130,13 +134,14 @@ class UniswapV3PositionManager(Contract):
             "amount1Desired": amount1_desired,
             "amount0Min": 0,  # Set minimums to avoid slippage
             "amount1Min": 0,
-            "deadline": web3.eth.get_block("latest")["timestamp"] + 600  # 10-minute deadline
+            "deadline": web3_utils.get_tx_deadline(self.web3),
         }).build_transaction({
             "from": wallet_address,
             "nonce": self.get_nonce(wallet_address),
             "gasPrice": web3_utils.get_gas_price(self.web3),
             "gas": 250000,
         })
+        return tx
 
     @to_checksum_address(6)
     def open_position_for_pool(self, pool: UniswapV3Pool, 
@@ -177,9 +182,18 @@ class UniswapV3PositionManager(Contract):
             "gas": 500000,
         })
         return tx
+    
+    @to_checksum_address(2)
+    def burn(self, position_id: int, wallet_address: str):
+        tx = self.contract.functions.burn(position_id).build_transaction({
+            "from": wallet_address,
+            "nonce": self.get_nonce(wallet_address),
+            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gas": 100000,
+        })
+        return tx
 
-
-    def get_ticks(self, pool: UniswapV3Pool, deviation_percent: int):
+    def get_ticks(self, pool: UniswapV3Pool, deviation_percent: int) -> tuple[int, int]:
         fee_tier = pool.get_fee_tier()
         tick_spacing = PoolTickSpacing[PoolFee(fee_tier).name].value
         price = pool.get_pool_price()

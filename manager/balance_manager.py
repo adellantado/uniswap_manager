@@ -53,15 +53,12 @@ class BalanceManager:
             try:
                 print(f"Transfer {amount} ETH to {receiver_address}")
                 gas_units = web3_utils.estimate_tx_gas(self.web3, tx)
+                price = self.web3.from_wei(gas_price,"gwei")
+                costs = self.web3.from_wei(gas_price * gas_units, "gwei")
                 print(
-                    "Gas price",
-                    self.web3.from_wei(gas_price, "gwei"),
-                    "Gwei",
-                    "Gas=",
-                    self.web3.from_wei(gas_price * gas_units, "gwei"),
-                    "Gwei",
-                    f"{gas_price*gas_units*eth_price/10**18:.2f}",
-                    "$",
+                    f"{str(gas_units)} units for {str(price)} Gwei -> ",
+                    f"{str(costs)} Gwei, ",
+                    f"{gas_price*gas_units * eth_price / 10**18:.2f}$"
                 )
             except ContractLogicError as e:
                 print("error: can't estimate gas") 

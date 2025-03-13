@@ -55,3 +55,8 @@ def get_gas_price(web3: Web3):
 
 def get_eth_balance(web3: Web3, address: str) -> float:
     return web3.eth.get_balance(web3.to_checksum_address(address))
+
+def raise_address_not_valid(web3: Web3, address: str) -> bool:
+    if not web3.is_address(address):
+        raise Exception(f"Invalid address: {address}")
+    

@@ -59,6 +59,7 @@ def balance(wallet, erc20, all):
     if wallet:
         # check wallet address alias from config
         address = utils.get_wallet_address(wallet)
+        web3_utils.raise_address_not_valid(manager.web3, address)
     else:
         address = wallet
     if erc20:
@@ -90,8 +91,9 @@ def price(symbol):
 @click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
 def swap(in_token, out_token, wallet, estimate, send):
     wallet_address = utils.get_wallet_address(wallet)
+    manager = UniswapManager(utils.get_config())
+    web3_utils.raise_address_not_valid(manager.web3, wallet_address)
     try:
-        manager = UniswapManager(utils.get_config())
         _, in_erc20, _, in_native_amount = cli_utils.split_token_amount(in_token)
         _, out_erc20, _, out_native_amount = cli_utils.split_token_amount(out_token)
         manager.swap(in_erc20, out_erc20, in_native_amount, out_native_amount, wallet_address, 
@@ -110,13 +112,59 @@ def swap(in_token, out_token, wallet, estimate, send):
 @click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
 def open_position(token1, token2, fee_tier, wallet, estimate, send):
     wallet_address = utils.get_wallet_address(wallet)
+    manager = UniswapManager(utils.get_config())
+    web3_utils.raise_address_not_valid(manager.web3, wallet_address)
     try:
-        manager = UniswapManager(utils.get_config())
         _, token1_erc20, _, token1_native_amount = cli_utils.split_token_amount(token1)
         _, token2_erc20, _, token2_native_amount = cli_utils.split_token_amount(token2)
         manager.open_position(token1_erc20, token2_erc20, token1_native_amount, token2_native_amount, 
             int(fee_tier), wallet_address, False if estimate else send
         )
+    except UniswapManagerError as e:
+        click.echo(str(e))
+        exit(1)
+
+@click.command("add-liquidity", help="Add liquidity to a Uniswap V3 pool")
+@click.argument('token1')
+@click.argument('token2')
+@click.argument('position_id')
+@click.argument('wallet')
+@click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
+@click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
+def add_liquidity(token1, token2, position_id, wallet, estimate, send):
+    wallet_address = utils.get_wallet_address(wallet)
+    manager = UniswapManager(utils.get_config())
+    web3_utils.raise_address_not_valid(manager.web3, wallet_address)
+    try:
+        _, token1_erc20, _, token1_native_amount = cli_utils.split_token_amount(token1)
+        _, token2_erc20, _, token2_native_amount = cli_utils.split_token_amount(token2)
+        manager.add_liqudity(token1_erc20, token2_erc20, token1_native_amount, token2_native_amount, 
+            int(position_id), wallet_address, False if estimate else send
+        )
+    except UniswapManagerError as e:
+        click.echo(str(e))
+        exit(1)
+
+@click.command("close-position", help="Close Uniswap V3 position")
+@click.argument('position_id')
+@click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
+@click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
+def close_position(position_id, estimate, send):
+    try:
+        manager = UniswapManager(utils.get_config())
+        manager.close_position(int(position_id), False if estimate else send) 
+    except UniswapManagerError as e:
+        click.echo(str(e))
+        exit(1)
+
+@click.command("collect-fees", help="Close Uniswap V3 position")
+@click.argument('position_id')
+@click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
+@click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
+def collect_fees(position_id, estimate, send):
+    try:
+        manager = UniswapManager(utils.get_config())
+        manager.collect_position_fees(int(position_id), False if estimate else send)
     except UniswapManagerError as e:
         click.echo(str(e))
         exit(1)
@@ -140,8 +188,10 @@ def net():
 def send(token, wallet_from, wallet_to, estimate, send):
     wallet_from_address = utils.get_wallet_address(wallet_from)
     wallet_to_address = utils.get_wallet_address(wallet_to)
+    manager = BalanceManager(utils.get_config())
+    web3_utils.raise_address_not_valid(manager.web3, wallet_from_address)
+    web3_utils.raise_address_not_valid(manager.web3, wallet_to_address)
     try:
-        manager = BalanceManager(utils.get_config())
         if token[:3].upper() == 'ETH':
             _, amount = cli_utils.split_coin_name_and_amount(token)
             if amount == 0:
@@ -172,6 +222,9 @@ cli.add_command(positions)
 cli.add_command(price)
 cli.add_command(swap)
 cli.add_command(open_position)
+cli.add_command(close_position)
+cli.add_command(add_liquidity)
+cli.add_command(collect_fees)
 cli.add_command(send)
 
 

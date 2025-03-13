@@ -16,13 +16,16 @@
 ## Commands
 
 ```
-  balance        Prints balance of ETH/ERC20 token for addresses in the...
-  net            Prints network info
-  open-position  Open Uniswap V3 position
-  positions      Prints Uniswap V3 positions for addresses in the config
-  price          Prints Binance price of a given coin in USD
-  send           Send ETH/ERC20 tokens to another wallet 
-  swap           Swap ERC20 tokens using Uniswap V3.
+  add-liquidity   Add liquidity to a Uniswap V3 pool
+  balance         Prints balance of ETH/ERC20 token for addresses in the...
+  close-position  Close Uniswap V3 position
+  collect-fees    Close Uniswap V3 position
+  net             Prints network info
+  open-position   Open Uniswap V3 position
+  positions       Prints Uniswap V3 positions for addresses in the config
+  price           Prints Binance price of a given coin in USD
+  send            Send ETH/ERC20 tokens to another wallet e.g.
+  swap            Swap ERC20 tokens using Uniswap V3.
 ```
 
 ### 1. Wallet balance
@@ -111,6 +114,42 @@ Usage: bum send [OPTIONS] TOKEN WALLET_FROM WALLET_TO
 
   Send ETH/ERC20 tokens to another wallet e.g.(bum send ETH=0.1 <wallet_alias>
   <wallet_address>)
+
+Options:
+  -e, --estimate  Estimate transactions
+  -s, --send      Sing and send transactions
+  --help          Show this message and exit.
+```
+
+### 8. Close position
+```
+Usage: bum close-position [OPTIONS] POSITION_ID
+
+  Close Uniswap V3 position
+
+Options:
+  -e, --estimate  Estimate transactions
+  -s, --send      Sing and send transactions
+  --help          Show this message and exit.
+```
+
+### 9. Add liquidity
+```
+Usage: bum add-liquidity [OPTIONS] TOKEN1 TOKEN2 POSITION_ID WALLET
+
+  Add liquidity to a Uniswap V3 pool
+
+Options:
+  -e, --estimate  Estimate transactions
+  -s, --send      Sing and send transactions
+  --help          Show this message and exit.
+```
+
+### 10. Collect fees
+```
+Usage: bum collect-fees [OPTIONS] POSITION_ID
+
+  Close Uniswap V3 position
 
 Options:
   -e, --estimate  Estimate transactions
