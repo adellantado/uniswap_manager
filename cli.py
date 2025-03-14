@@ -157,7 +157,7 @@ def close_position(position_id, estimate, send):
         click.echo(str(e))
         exit(1)
 
-@click.command("collect-fees", help="Close Uniswap V3 position")
+@click.command("collect-fees", help="Collect fees from Uniswap V3 position")
 @click.argument('position_id')
 @click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
 @click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")

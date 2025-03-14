@@ -8,6 +8,7 @@ from contracts.uniswap_v3_position_manager import UniswapV3PositionManager
 from contracts.uniswap_v3_router import UniswapV3Router
 from contracts.uniswap_v3_pool import PoolFee
 from contracts.uniswap_v3_factory import UniswapV3Factory
+from contracts.uniswap_v3_quoter_v2 import UniswapV3QuoterV2
 from contracts.erc20 import ERC20
 from contracts.weth9 import WETH9
 from contracts.contract import Contract
@@ -145,47 +146,48 @@ class UniswapManager:
         txs = []
         nonce = in_erc20.get_nonce(wallet_address)
         if out_token_amount == 0:
-            out_min_mode = False
+            find_in_mode = False
         else:
-            out_min_mode = True
+            find_in_mode = True
         # estimate prices and select fee tier
         fee_tier = PoolFee.FEE_TIER_100.value
-        lowest_price = 0
+        # lowest_price = 0
+        best_quote = None
+        quoter = UniswapV3QuoterV2(self.config)
         for tier in PoolFee:
             pool = UniswapV3Factory.get_singleton(self.config).get_pool(
                 in_erc20.contract_address, out_erc20.contract_address, tier
             )
-            price_to_token_1 = pool.get_pool_price(True)
-            if pool.get_token0_address().lower() == in_erc20.contract_address.lower():
-                price_to_token_1 = 1 / price_to_token_1
-            price_full = price_to_token_1 + price_to_token_1 * tier / 1000000
-            if lowest_price == 0 or price_full < lowest_price:
-                lowest_price = price_full
+
+            if find_in_mode:
+                quote = quoter.quote_exact_output(pool, out_erc20, out_token_amount)
+                amount_key = 'amountIn'
+            else:
+                quote = quoter.quote_exact_input(pool, in_erc20, in_token_amount)
+                amount_key = 'amountOut'
+
+            if best_quote is None:
+                best_quote = quote
                 fee_tier = tier.value
+            elif find_in_mode and (quote[amount_key] < best_quote[amount_key]):
+                print(f"Pool {tier / 10000}% {'input' if find_in_mode else 'output'} amount = {quote[amount_key]}")
+                best_quote = quote
+                fee_tier = tier.value
+            elif not find_in_mode and (quote[amount_key] > best_quote[amount_key]):
+                best_quote = quote
+                fee_tier = tier.value
+
             if not send:
                 print(
-                    "Pool",
-                    tier / 10000,
-                    "% token price = ",
-                    price_to_token_1,
-                    in_erc20.get_symbol(),
-                    "with fees",
-                    price_full,
-                    in_erc20.get_symbol(),
+                    f"Pool {tier / 10000}% {'input' if find_in_mode else 'output'} "
+                    f"amount = {quote[amount_key]/10**(in_erc20.get_decimals() if find_in_mode else out_erc20.get_decimals())} "
+                    f"{in_erc20.get_symbol() if find_in_mode else out_erc20.get_symbol()} "
+                    f"with gas {quote['gasEstimate']} units",
                 )
-        if in_token_amount == 0:
-            in_token_amount = math.ceil(
-                price_full
-                * out_token_amount
-                * 10 ** (in_erc20.get_decimals() - out_erc20.get_decimals())
-            )
-        if out_token_amount == 0:
-            out_token_amount = math.ceil(
-                in_token_amount
-                / price_full
-                * 10 ** (out_erc20.get_decimals() - in_erc20.get_decimals())
-            )
-            print("Out token amount", out_token_amount, out_erc20.get_symbol())
+        if find_in_mode:
+            in_token_amount = best_quote[amount_key]
+        else:
+            out_token_amount = best_quote[amount_key]
         # check balance
         balance_manager = BalanceManager(self.config)
         deposit_weth_tx = self.check_balance_and_deposit_token(
@@ -203,28 +205,31 @@ class UniswapManager:
             txs.append(allow_tx)
             nonce += 1
         # swap
-        if out_min_mode:
-            swap_tx = router.set_nonce(nonce).swap_out_min(
-                in_erc20.contract_address,
-                out_erc20.contract_address,
-                in_token_amount,
-                out_token_amount,
-                fee_tier,
-                wallet_address,
-            )
-        else:
-            swap_tx = router.set_nonce(nonce).swap_in_max(
-                in_erc20.contract_address,
-                out_erc20.contract_address,
-                in_token_amount,
-                out_token_amount,
-                fee_tier,
-                wallet_address,
-            )
+        swap_tx = None
+        if send:
+            if find_in_mode:
+                swap_tx = router.set_nonce(nonce).swap_out_min(
+                    in_erc20.contract_address,
+                    out_erc20.contract_address,
+                    in_token_amount,
+                    out_token_amount,
+                    fee_tier,
+                    wallet_address,
+                )
+            else:
+                swap_tx = router.set_nonce(nonce).swap_in_max(
+                    in_erc20.contract_address,
+                    out_erc20.contract_address,
+                    in_token_amount,
+                    out_token_amount,
+                    fee_tier,
+                    wallet_address,
+                )
         txs.append(
             {
                 "tx": swap_tx,
                 "action": f"Swap {in_token_amount/10**in_erc20.get_decimals()} {in_erc20.get_symbol()} to {out_erc20.get_symbol()}",
+                "gas": best_quote["gasEstimate"]
             }
         )
         print(f"Transactions: {len(txs)}")
@@ -496,11 +501,14 @@ class UniswapManager:
         for i, tx in enumerate(txs):
             try:
                 print(f"{i+1}.  {tx['action']}:")
-                gas_units = web3_utils.estimate_tx_gas(self.web3, tx["tx"])
+                if 'gas' in tx:
+                    gas_units = tx['gas']
+                else:
+                    gas_units = web3_utils.estimate_tx_gas(self.web3, tx["tx"])
                 costs = self.web3.from_wei(gas_price * gas_units, "gwei")
                 print(
-                    f"{str(gas_units)} units for {str(price)} Gwei -> ",
-                    f"{str(costs)} Gwei, ",
+                    f"{str(gas_units)} units for {price:.2f} Gwei -> "
+                    f"{costs:.2f} Gwei, "
                     f"{gas_price*gas_units * eth_price / 10**18:.2f}$"
                 )
             except ContractLogicError as e:
@@ -513,6 +521,22 @@ class UniswapManager:
             receipt = contract.get_tx_receipt(tx_hash)
             print(receipt)
 
+    def quote_for_in_token(self, in_erc20: ERC20, out_erc20: ERC20, amount_in: int, fee_tier: int) -> dict:
+        quoter = UniswapV3QuoterV2(self.config)
+        pool = UniswapV3Factory.get_singleton(self.config).get_pool(
+            in_erc20.contract_address, out_erc20.contract_address, fee_tier
+        )
+        res = quoter.quote_exact_input(pool, in_erc20, amount_in)
+        print(res)
+        return res
 
+    def quote_for_out_token(self, in_erc20: ERC20, out_erc20: ERC20, amount_out: int, fee_tier: int) -> dict:
+        quoter = UniswapV3QuoterV2(self.config)
+        pool = UniswapV3Factory.get_singleton(self.config).get_pool(
+            in_erc20.contract_address, out_erc20.contract_address, fee_tier
+        )
+        res = quoter.quote_exact_output(pool, out_erc20, amount_out)
+        return res
+    
 class UniswapManagerError(Exception):
     pass

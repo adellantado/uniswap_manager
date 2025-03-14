@@ -42,7 +42,6 @@ def sign_and_send_tx(web3: Web3, tx: str, wallet: str):
 
 def estimate_tx_gas(web3: Web3, tx) -> int:
     gas_estimate = web3.eth.estimate_gas(tx)
-    print(f"Estimated Gas for tx: {gas_estimate} units")
     return gas_estimate
 
 def get_tx_deadline(web3: Web3):
