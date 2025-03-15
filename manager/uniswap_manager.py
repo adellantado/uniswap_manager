@@ -139,6 +139,7 @@ class UniswapManager:
         out_token_amount: int,
         wallet_address: str,
         send=False,
+        raw=False,
     ):
         if in_erc20 == out_erc20:
             raise UniswapManagerError("Tokens must be different")
@@ -233,7 +234,9 @@ class UniswapManager:
             }
         )
         print(f"Transactions: {len(txs)}")
-        if send:
+        if raw:
+            self.get_raw_txs(txs, wallet_address)
+        elif send:
             self.send_txs(txs, router, wallet_address)
         else:
             self.estimate_txs(txs)
@@ -247,6 +250,7 @@ class UniswapManager:
         fee: int,
         wallet_address: str,
         send=False,
+        raw=False,
     ):
         if token0 == token1:
             raise UniswapManagerError("Tokens must be different")
@@ -312,12 +316,14 @@ class UniswapManager:
         else:
             raise UniswapManagerError(f"Position already exists: {position_id}")
         print(f"Transactions: {len(txs)}")
-        if send:
+        if raw:
+            self.get_raw_txs(txs, wallet_address)
+        elif send:
             self.send_txs(txs, position_manager, wallet_address)
         else:
             self.estimate_txs(txs)
 
-    def close_position(self, position_id: int, send=False):
+    def close_position(self, position_id: int, send=False, raw=False):
         current_position = None
         wallet_address = None
         positions = self.get_list_of_positions(refresh_data=False)
@@ -346,7 +352,9 @@ class UniswapManager:
         collect_tx = position_manager.set_nonce(nonce).burn(position_id, wallet_address)
         txs.append({"tx": collect_tx, "action": f"Burn position {str(position_id)} completely"})
         print(f"Transactions: {len(txs)}")
-        if send:
+        if raw:
+            self.get_raw_txs(txs, wallet_address)
+        elif send:
             self.send_txs(txs, position_manager, wallet_address)
         else:
             self.estimate_txs(txs)
@@ -360,6 +368,7 @@ class UniswapManager:
         position_id: int,
         wallet_address: str,
         send=False,
+        raw=False,
     ):
         if token0 == token1:
             raise UniswapManagerError("Tokens must be different")
@@ -418,12 +427,14 @@ class UniswapManager:
         txs.append({"tx": inc_liq_tx, "action": f"Increse liquidity for position {position_id}"})
         nonce += 1
         print(f"Transactions: {len(txs)}")
-        if send:
+        if raw:
+            self.get_raw_txs(txs, wallet_address)
+        elif send:
             self.send_txs(txs, position_manager, wallet_address)
         else:
             self.estimate_txs(txs)
 
-    def collect_position_fees(self, position_id: int, send=False):
+    def collect_position_fees(self, position_id: int, send=False, raw=False):
         current_position = None
         wallet_address = None
         positions = self.get_list_of_positions(refresh_data=False)
@@ -440,7 +451,9 @@ class UniswapManager:
         collect_tx = position_manager.collect_all(wallet_address, position_id)
         txs = [{"tx": collect_tx, "action": f"Collect liquidity for position {str(position_id)}"}]
         print(f"Transactions: {len(txs)}")
-        if send:
+        if raw:
+            self.get_raw_txs(txs, wallet_address)
+        elif send:
             self.send_txs(txs, position_manager, wallet_address)
         else:
             self.estimate_txs(txs)
@@ -520,6 +533,12 @@ class UniswapManager:
             tx_hash = contract.sign_and_send_tx(tx["tx"], wallet_address)
             receipt = contract.get_tx_receipt(tx_hash)
             print(receipt)
+
+    def get_raw_txs(self, txs: list[dict], wallet_address: str):
+        for i, tx in enumerate(txs):
+            print(f"{i+1}.  {tx['action']}")
+            raw_tx = web3_utils.sign_and_get_raw_tx(self.web3, tx["tx"], wallet_address)
+            print(f"Singed raw transaction:\n{raw_tx}")
 
     def quote_for_in_token(self, in_erc20: ERC20, out_erc20: ERC20, amount_in: int, fee_tier: int) -> dict:
         quoter = UniswapV3QuoterV2(self.config)

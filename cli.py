@@ -89,7 +89,8 @@ def price(symbol):
 @click.argument('wallet')
 @click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
 @click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
-def swap(in_token, out_token, wallet, estimate, send):
+@click.option('--raw', '-r', is_flag=True, default=False, help="Sing and return raw transaction")
+def swap(in_token, out_token, wallet, estimate, send, raw):
     wallet_address = utils.get_wallet_address(wallet)
     manager = UniswapManager(utils.get_config())
     web3_utils.raise_address_not_valid(manager.web3, wallet_address)
@@ -97,7 +98,7 @@ def swap(in_token, out_token, wallet, estimate, send):
         _, in_erc20, _, in_native_amount = cli_utils.split_token_amount(in_token)
         _, out_erc20, _, out_native_amount = cli_utils.split_token_amount(out_token)
         manager.swap(in_erc20, out_erc20, in_native_amount, out_native_amount, wallet_address, 
-            False if estimate else send
+            False if estimate else send, raw
         )
     except UniswapManagerError as e:
         click.echo(str(e))
@@ -110,7 +111,8 @@ def swap(in_token, out_token, wallet, estimate, send):
 @click.argument('wallet')
 @click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
 @click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
-def open_position(token1, token2, fee_tier, wallet, estimate, send):
+@click.option('--raw', '-r', is_flag=True, default=False, help="Sing and return raw transaction")
+def open_position(token1, token2, fee_tier, wallet, estimate, send, raw):
     wallet_address = utils.get_wallet_address(wallet)
     manager = UniswapManager(utils.get_config())
     web3_utils.raise_address_not_valid(manager.web3, wallet_address)
@@ -118,7 +120,7 @@ def open_position(token1, token2, fee_tier, wallet, estimate, send):
         _, token1_erc20, _, token1_native_amount = cli_utils.split_token_amount(token1)
         _, token2_erc20, _, token2_native_amount = cli_utils.split_token_amount(token2)
         manager.open_position(token1_erc20, token2_erc20, token1_native_amount, token2_native_amount, 
-            int(fee_tier), wallet_address, False if estimate else send
+            int(fee_tier), wallet_address, False if estimate else send, raw
         )
     except UniswapManagerError as e:
         click.echo(str(e))
@@ -131,7 +133,8 @@ def open_position(token1, token2, fee_tier, wallet, estimate, send):
 @click.argument('wallet')
 @click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
 @click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
-def add_liquidity(token1, token2, position_id, wallet, estimate, send):
+@click.option('--raw', '-r', is_flag=True, default=False, help="Sing and return raw transaction")
+def add_liquidity(token1, token2, position_id, wallet, estimate, send, raw):
     wallet_address = utils.get_wallet_address(wallet)
     manager = UniswapManager(utils.get_config())
     web3_utils.raise_address_not_valid(manager.web3, wallet_address)
@@ -139,7 +142,7 @@ def add_liquidity(token1, token2, position_id, wallet, estimate, send):
         _, token1_erc20, _, token1_native_amount = cli_utils.split_token_amount(token1)
         _, token2_erc20, _, token2_native_amount = cli_utils.split_token_amount(token2)
         manager.add_liqudity(token1_erc20, token2_erc20, token1_native_amount, token2_native_amount, 
-            int(position_id), wallet_address, False if estimate else send
+            int(position_id), wallet_address, False if estimate else send, raw
         )
     except UniswapManagerError as e:
         click.echo(str(e))
@@ -149,10 +152,11 @@ def add_liquidity(token1, token2, position_id, wallet, estimate, send):
 @click.argument('position_id')
 @click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
 @click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
-def close_position(position_id, estimate, send):
+@click.option('--raw', '-r', is_flag=True, default=False, help="Sing and return raw transaction")
+def close_position(position_id, estimate, send, raw):
     try:
         manager = UniswapManager(utils.get_config())
-        manager.close_position(int(position_id), False if estimate else send) 
+        manager.close_position(int(position_id), False if estimate else send, raw) 
     except UniswapManagerError as e:
         click.echo(str(e))
         exit(1)
@@ -161,10 +165,11 @@ def close_position(position_id, estimate, send):
 @click.argument('position_id')
 @click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
 @click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
-def collect_fees(position_id, estimate, send):
+@click.option('--raw', '-r', is_flag=True, default=False, help="Sing and return raw transaction")
+def collect_fees(position_id, estimate, send, raw):
     try:
         manager = UniswapManager(utils.get_config())
-        manager.collect_position_fees(int(position_id), False if estimate else send)
+        manager.collect_position_fees(int(position_id), False if estimate else send, raw)
     except UniswapManagerError as e:
         click.echo(str(e))
         exit(1)
@@ -185,7 +190,8 @@ def net():
 @click.argument('wallet_to')
 @click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
 @click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
-def send(token, wallet_from, wallet_to, estimate, send):
+@click.option('--raw', '-r', is_flag=True, default=False, help="Sing and return raw transaction")
+def send(token, wallet_from, wallet_to, estimate, send, raw):
     wallet_from_address = utils.get_wallet_address(wallet_from)
     wallet_to_address = utils.get_wallet_address(wallet_to)
     manager = BalanceManager(utils.get_config())
@@ -201,7 +207,7 @@ def send(token, wallet_from, wallet_to, estimate, send):
             if balance < amount:
                 print(f"Insufficient balance. Available: {balance} ETH")
                 exit(1)
-            manager.send_eth(wallet_from_address, wallet_to_address, amount, False if estimate else send)
+            manager.send_eth(wallet_from_address, wallet_to_address, amount, False if estimate else send, raw)
         else:
             _, erc20, _, native_amount = cli_utils.split_token_amount(token)
             if native_amount == 0:
@@ -211,10 +217,17 @@ def send(token, wallet_from, wallet_to, estimate, send):
             if balance < native_amount:
                 print(f"Insufficient balance. Available: {balance/10**decimals:.2f} {symbol}")
                 exit(1)
-            manager.send_token(wallet_from_address, wallet_to_address, erc20, native_amount, False if estimate else send)
+            manager.send_token(wallet_from_address, wallet_to_address, erc20, native_amount, False if estimate else send, raw)
     except ContractLogicError as e:
         click.echo(str(e))
         exit(1)
+
+@click.command("send-raw-tx", help="Send raw transaction")
+@click.argument('tx')
+def send_raw_tx(tx):
+    web3 = web3_utils.get_web3(utils.get_config())
+    tx_hash = web3.eth.send_raw_transaction(tx)
+    print(f"Transaction hash: {tx_hash.hex()}")
 
 cli.add_command(net)
 cli.add_command(balance)
@@ -226,6 +239,7 @@ cli.add_command(close_position)
 cli.add_command(add_liquidity)
 cli.add_command(collect_fees)
 cli.add_command(send)
+cli.add_command(send_raw_tx)
 
 
 if __name__ == '__main__':

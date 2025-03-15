@@ -34,11 +34,15 @@ def get_topic_keccak_hex(topic: str) -> str:
 def get_topic_hex(hex_str: str) -> str:
     return '0x'+hex_str[2:].rjust(64, '0')
 
-def sign_and_send_tx(web3: Web3, tx: str, wallet: str):
+def sign_and_send_tx(web3: Web3, tx, wallet: str):
     signed_tx = web3.eth.account.sign_transaction(tx, utils.get_private_key(wallet))
     tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
     print(f"Transaction hash: {tx_hash.hex()}")
     return tx_hash
+
+def sign_and_get_raw_tx(web3: Web3, tx, wallet: str):
+    signed_tx = web3.eth.account.sign_transaction(tx, utils.get_private_key(wallet))
+    return signed_tx.raw_transaction.hex()
 
 def estimate_tx_gas(web3: Web3, tx) -> int:
     gas_estimate = web3.eth.estimate_gas(tx)
