@@ -92,9 +92,9 @@ class UniswapManager:
                 if wallet_address.lower() == wa.lower():
                     wallet_title = wallet_name
                     break
-            print(f"Wallet: {wallet_title}\n👇👇👇")
+            utils.print(f"Wallet: {wallet_title}\n👇👇👇")
             if not positions:
-                print("No positions found")
+                utils.print("No positions found", "info")
             for position_id, position in positions.items():
                 apy, position_days, total_amount, total_fees, symbol = (
                     position.calculate_position_apy()
@@ -103,14 +103,15 @@ class UniswapManager:
                 total_amount = total_amount * token_price
                 total_fees = total_fees * token_price
                 low_price, high_price = position.get_price_range()
-                print(
+                utils.print(
                     f"{'⚪️' if position.is_closed() else '🟢' if position.is_active() else '🔴'} "
                     f"price range {1/low_price:.2f} {position.get_token0().get_symbol()} - "
                     f"{1/high_price:.2f} {position.get_token1().get_symbol()}, "
-                    f"opened at {position.creation_date}"
+                    f"opened at {position.creation_date}",
+                    "info",
                 )
                 token0_amount, token1_amount = position.get_total_locked_amount()
-                print(
+                utils.print(
                     "Locked: ",
                     token0_amount,
                     position.get_token0().get_symbol(),
@@ -118,18 +119,19 @@ class UniswapManager:
                     position.get_token1().get_symbol(),
                 )
                 token0_fee, token1_fee = position.get_total_fees_collected()
-                print(
+                utils.print(
                     "Fees: ",
                     token0_fee,
                     position.get_token0().get_symbol(),
                     token1_fee,
                     position.get_token1().get_symbol(),
                 )
-                print(
+                utils.print(
                     f"{position.name} APY: {apy:.2f}%, {position_days} days,"
-                    f"{total_amount:.2f}$ deposit, {total_fees:.2f}$ fees"
+                    f"{total_amount:.2f}$ deposit, {total_fees:.2f}$ fees",
+                    "info",
                 )
-                print("---------------------------------------")
+                utils.print("---------------------------------------")
 
     def swap(
         self,
@@ -171,7 +173,7 @@ class UniswapManager:
                 best_quote = quote
                 fee_tier = tier.value
             elif find_in_mode and (quote[amount_key] < best_quote[amount_key]):
-                print(f"Pool {tier / 10000}% {'input' if find_in_mode else 'output'} amount = {quote[amount_key]}")
+                utils.print(f"Pool {tier / 10000}% {'input' if find_in_mode else 'output'} amount = {quote[amount_key]}")
                 best_quote = quote
                 fee_tier = tier.value
             elif not find_in_mode and (quote[amount_key] > best_quote[amount_key]):
@@ -179,7 +181,7 @@ class UniswapManager:
                 fee_tier = tier.value
 
             if not send:
-                print(
+                utils.print(
                     f"Pool {tier / 10000}% {'input' if find_in_mode else 'output'} "
                     f"amount = {quote[amount_key]/10**(in_erc20.get_decimals() if find_in_mode else out_erc20.get_decimals())} "
                     f"{in_erc20.get_symbol() if find_in_mode else out_erc20.get_symbol()} "
@@ -207,7 +209,7 @@ class UniswapManager:
             nonce += 1
         # swap
         swap_tx = None
-        if send:
+        if send or raw:
             if find_in_mode:
                 swap_tx = router.set_nonce(nonce).swap_out_min(
                     in_erc20.contract_address,
@@ -233,7 +235,7 @@ class UniswapManager:
                 "gas": best_quote["gasEstimate"]
             }
         )
-        print(f"Transactions: {len(txs)}")
+        utils.print(f"Transactions: {len(txs)}")
         if raw:
             self.get_raw_txs(txs, wallet_address)
         elif send:
@@ -315,7 +317,7 @@ class UniswapManager:
             nonce += 1
         else:
             raise UniswapManagerError(f"Position already exists: {position_id}")
-        print(f"Transactions: {len(txs)}")
+        utils.print(f"Transactions: {len(txs)}")
         if raw:
             self.get_raw_txs(txs, wallet_address)
         elif send:
@@ -351,7 +353,7 @@ class UniswapManager:
         nonce += 1
         collect_tx = position_manager.set_nonce(nonce).burn(position_id, wallet_address)
         txs.append({"tx": collect_tx, "action": f"Burn position {str(position_id)} completely"})
-        print(f"Transactions: {len(txs)}")
+        utils.print(f"Transactions: {len(txs)}")
         if raw:
             self.get_raw_txs(txs, wallet_address)
         elif send:
@@ -426,7 +428,7 @@ class UniswapManager:
         inc_liq_tx = position_manager.set_nonce(nonce).increase_liquidity(position_id, amount0, amount1, wallet_address)
         txs.append({"tx": inc_liq_tx, "action": f"Increse liquidity for position {position_id}"})
         nonce += 1
-        print(f"Transactions: {len(txs)}")
+        utils.print(f"Transactions: {len(txs)}")
         if raw:
             self.get_raw_txs(txs, wallet_address)
         elif send:
@@ -450,7 +452,7 @@ class UniswapManager:
         position_manager = UniswapV3PositionManager.get_singleton(self.config)
         collect_tx = position_manager.collect_all(wallet_address, position_id)
         txs = [{"tx": collect_tx, "action": f"Collect liquidity for position {str(position_id)}"}]
-        print(f"Transactions: {len(txs)}")
+        utils.print(f"Transactions: {len(txs)}")
         if raw:
             self.get_raw_txs(txs, wallet_address)
         elif send:
@@ -513,32 +515,33 @@ class UniswapManager:
         price = self.web3.from_wei(gas_price,"gwei")
         for i, tx in enumerate(txs):
             try:
-                print(f"{i+1}.  {tx['action']}:")
+                utils.print(f"{i+1}.  {tx['action']}:")
                 if 'gas' in tx:
                     gas_units = tx['gas']
                 else:
                     gas_units = web3_utils.estimate_tx_gas(self.web3, tx["tx"])
                 costs = self.web3.from_wei(gas_price * gas_units, "gwei")
-                print(
+                utils.print(
                     f"{str(gas_units)} units for {price:.2f} Gwei -> "
                     f"{costs:.2f} Gwei, "
                     f"{gas_price*gas_units * eth_price / 10**18:.2f}$"
                 )
             except ContractLogicError as e:
-                print("error: can't estimate gas")
+                utils.print("error: can't estimate gas", "warning")
 
     def send_txs(self, txs: list[dict], contract: Contract, wallet_address: str):
         for i, tx in enumerate(txs):
-            print(f"{i+1}.  {tx['action']}")
+            utils.print(f"{i+1}.  {tx['action']}")
             tx_hash = contract.sign_and_send_tx(tx["tx"], wallet_address)
+            utils.print(f"Transaction hash: {tx_hash.hex()}", "success")
             receipt = contract.get_tx_receipt(tx_hash)
-            print(receipt)
+            # utils.print(receipt)
 
     def get_raw_txs(self, txs: list[dict], wallet_address: str):
         for i, tx in enumerate(txs):
-            print(f"{i+1}.  {tx['action']}")
+            utils.print(f"{i+1}.  {tx['action']}")
             raw_tx = web3_utils.sign_and_get_raw_tx(self.web3, tx["tx"], wallet_address)
-            print(f"Singed raw transaction:\n{raw_tx}")
+            utils.print(f"Singed raw transaction:\n{raw_tx}", "info")
 
     def quote_for_in_token(self, in_erc20: ERC20, out_erc20: ERC20, amount_in: int, fee_tier: int) -> dict:
         quoter = UniswapV3QuoterV2(self.config)
@@ -546,7 +549,6 @@ class UniswapManager:
             in_erc20.contract_address, out_erc20.contract_address, fee_tier
         )
         res = quoter.quote_exact_input(pool, in_erc20, amount_in)
-        print(res)
         return res
 
     def quote_for_out_token(self, in_erc20: ERC20, out_erc20: ERC20, amount_out: int, fee_tier: int) -> dict:

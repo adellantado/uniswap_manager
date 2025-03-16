@@ -37,7 +37,6 @@ def get_topic_hex(hex_str: str) -> str:
 def sign_and_send_tx(web3: Web3, tx, wallet: str):
     signed_tx = web3.eth.account.sign_transaction(tx, utils.get_private_key(wallet))
     tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-    print(f"Transaction hash: {tx_hash.hex()}")
     return tx_hash
 
 def sign_and_get_raw_tx(web3: Web3, tx, wallet: str):

@@ -5,6 +5,8 @@ import requests
 import json
 from pathlib import Path
 
+import click
+
 
 def get_coin_price_usd(symbol: str) -> str:
     if symbol.upper() == "WETH":
@@ -72,3 +74,22 @@ def get_private_key(wallet: str):
         if wallet.lower() == alias.lower() or wallet.lower() == address.lower():
             return get_private_key_by_path(config['wallet']['keys'][alias])
     return None
+
+def print(message: str, type: str = None):
+    config = get_config()
+    if not bool(config["styles"]["active"]):
+        click.secho(message)
+        return
+    is_bright = bool(config["styles"]["bright"])
+    colors = {
+        "info": "blue",
+        "warning": "yellow",
+        "error": "red",
+        "success": "green",
+    }
+    color = colors.get(type, None)
+    color = "bright_"+color if (is_bright and color) else color
+    if color:
+        click.secho(message, fg=color)
+    else:
+        click.secho(message)

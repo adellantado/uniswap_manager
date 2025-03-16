@@ -22,7 +22,7 @@ def split_token_amount(token: str) -> tuple[str, Contract, float, int]:
         token = 'WETH'
     token_address = utils.get_token_address(token)
     erc20 = ERC20.get_instance(token_address)
-    native_amount = int(amount * 10**erc20.get_decimals())
+    native_amount = int(amount * 10**erc20.get_decimals()) if amount != 0 else 0
     return token, erc20, amount, native_amount
 
 def split_coin_name_and_amount(coins: str) -> tuple[str, float]:

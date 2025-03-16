@@ -97,6 +97,9 @@ def swap(in_token, out_token, wallet, estimate, send, raw):
     try:
         _, in_erc20, _, in_native_amount = cli_utils.split_token_amount(in_token)
         _, out_erc20, _, out_native_amount = cli_utils.split_token_amount(out_token)
+        if in_native_amount == 0 and out_native_amount == 0:
+            utils.print("Amount can't be 0 for both tokens", "error")
+            exit(1)
         manager.swap(in_erc20, out_erc20, in_native_amount, out_native_amount, wallet_address, 
             False if estimate else send, raw
         )
@@ -201,21 +204,21 @@ def send(token, wallet_from, wallet_to, estimate, send, raw):
         if token[:3].upper() == 'ETH':
             _, amount = cli_utils.split_coin_name_and_amount(token)
             if amount == 0:
-                print("Amount can't be 0")
+                utils.print("Amount can't be 0", "error")
                 exit(1)
             balance = manager.get_eth_balance(wallet_from_address)
             if balance < amount:
-                print(f"Insufficient balance. Available: {balance} ETH")
+                utils.print(f"Insufficient balance. Available: {balance} ETH", "error")
                 exit(1)
             manager.send_eth(wallet_from_address, wallet_to_address, amount, False if estimate else send, raw)
         else:
             _, erc20, _, native_amount = cli_utils.split_token_amount(token)
             if native_amount == 0:
-                print("Amount can't be 0")
+                utils.print("Amount can't be 0", "error")
                 exit(1)
             balance, decimals, symbol = manager.get_token_balance(wallet_from_address, erc20.contract_address)
             if balance < native_amount:
-                print(f"Insufficient balance. Available: {balance/10**decimals:.2f} {symbol}")
+                utils.print(f"Insufficient balance. Available: {balance/10**decimals:.2f} {symbol}", "error")
                 exit(1)
             manager.send_token(wallet_from_address, wallet_to_address, erc20, native_amount, False if estimate else send, raw)
     except ContractLogicError as e:
@@ -227,7 +230,7 @@ def send(token, wallet_from, wallet_to, estimate, send, raw):
 def send_raw_tx(tx):
     web3 = web3_utils.get_web3(utils.get_config())
     tx_hash = web3.eth.send_raw_transaction(tx)
-    print(f"Transaction hash: {tx_hash.hex()}")
+    utils.print(f"Transaction hash: {tx_hash.hex()}", "success")
 
 cli.add_command(net)
 cli.add_command(balance)
