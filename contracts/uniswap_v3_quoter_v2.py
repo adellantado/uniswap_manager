@@ -5,8 +5,8 @@ from .uniswap_v3_pool import UniswapV3Pool
 
 class UniswapV3QuoterV2(Contract):
 
-    def __init__(self, config: dict):
-        super().__init__(config['uniswap']['contracts']['quoter'], "UniswapV3QuoterV2")
+    def __init__(self):
+        super().__init__(self.config.uniswap_v3_quoter, "UniswapV3QuoterV2")
 
     def quote_exact_input(self, pool: UniswapV3Pool, in_token: ERC20, in_token_amount: int) -> dict:
         if in_token == pool.get_token0():

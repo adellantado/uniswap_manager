@@ -12,7 +12,6 @@ class BalanceManager:
     """
     A class to manage and retrieve balances of ETH and ERC20 tokens using web3.
     Attributes:
-        config (dict): Configuration dictionary containing web3 settings.
         web3 (Web3): An instance of Web3 initialized with the provided configuration.
     Methods:
         get_eth_balance(wallet_address: str) -> float:
@@ -21,9 +20,8 @@ class BalanceManager:
             Retrieves the balance, decimals, and symbol of the specified ERC20 token for the given wallet address.
     """
 
-    def __init__(self, config: dict):
-        self.config = config
-        self.web3 = web3_utils.get_web3(config)
+    def __init__(self):
+        self.web3 = web3_utils.get_web3()
         Contract.web3 = self.web3
 
     def get_eth_balance(self, wallet_address: str, readable = False) -> float:

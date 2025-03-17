@@ -16,13 +16,13 @@ class WETH9(Contract):
 
     instance: WETH9 = None 
 
-    def __init__(self, config: dict):
-        super().__init__(config['ERC20']['tokens']['WETH'], "WETH9")
+    def __init__(self):
+        super().__init__(self.config.erc20_tokens['WETH'], "WETH9")
 
     @staticmethod
-    def get_singleton(config: dict) -> WETH9:
+    def get_singleton() -> WETH9:
         if WETH9.instance is None:
-            WETH9.instance = WETH9(config)
+            WETH9.instance = WETH9()
         return WETH9.instance
 
     @to_checksum_address(1)

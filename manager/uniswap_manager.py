@@ -4,6 +4,7 @@ from web3.exceptions import ContractLogicError
 
 from entity.uniswap_v3_position import UniswapV3Position
 from entity.pickle_cache import PickleCache
+from entity.config import Config
 from contracts.uniswap_v3_position_manager import UniswapV3PositionManager
 from contracts.uniswap_v3_router import UniswapV3Router
 from contracts.uniswap_v3_pool import PoolFee
@@ -37,11 +38,11 @@ class UniswapManager:
             Opens a new liquidity position on Uniswap V3.
     """
 
-    def __init__(self, config: dict):
-        self.config = config
-        self.web3 = web3_utils.get_web3(config)
+    def __init__(self):
+        self.config = Config.get_singleton()
+        self.web3 = web3_utils.get_web3()
         Contract.web3 = self.web3
-        self.position_manager = UniswapV3PositionManager.get_singleton(config)
+        self.position_manager = UniswapV3PositionManager.get_singleton()
 
     def get_list_of_positions(self, refresh_data: bool = True) -> dict[str, dict[int, UniswapV3Position]]:
         all_positions = {}
@@ -51,7 +52,7 @@ class UniswapManager:
         if cache.has("positions"):
             all_positions = cache.get("positions")
         # end caching positions
-        for wallet_alias, wallet_address in self.config["wallet"]["addresses"].items():
+        for wallet_alias, wallet_address in self.config.wallet_addresses.items():
             wallet_address = str(self.web3.to_checksum_address(wallet_address))
             position_ids = self.position_manager.get_position_ids(wallet_address)
             positions_per_address = {}
@@ -60,16 +61,14 @@ class UniswapManager:
                     position = UniswapV3Position.get_instance(
                         self.position_manager, position_id, wallet_address
                     )
-                    position.get_deposit_init_date(self.config["network"]["from_block"])
+                    position.get_deposit_init_date(self.config.history_from_block)
                     resave_file = True
                 else:
                     position = all_positions[wallet_address][position_id]
                     position.web3 = self.web3
                     position.position_manager = self.position_manager
                     position_data = position.position_data
-                    position.pool = UniswapV3Factory.get_singleton(
-                        self.config
-                    ).get_pool(
+                    position.pool = UniswapV3Factory.get_singleton().get_pool(
                         position_data["token0"],
                         position_data["token1"],
                         position_data["fee"],
@@ -88,7 +87,7 @@ class UniswapManager:
         all_positions = self.get_list_of_positions()
         for wallet_address, positions in all_positions.items():
             wallet_title = wallet_address
-            for wallet_name, wa in self.config["wallet"]["addresses"].items():
+            for wallet_name, wa in self.config.wallet_addresses.items():
                 if wallet_address.lower() == wa.lower():
                     wallet_title = wallet_name
                     break
@@ -159,9 +158,9 @@ class UniswapManager:
         fee_tier = PoolFee.FEE_TIER_100.value
         # lowest_price = 0
         best_quote = None
-        quoter = UniswapV3QuoterV2(self.config)
+        quoter = UniswapV3QuoterV2()
         for tier in PoolFee:
-            pool = UniswapV3Factory.get_singleton(self.config).get_pool(
+            pool = UniswapV3Factory.get_singleton().get_pool(
                 in_erc20.contract_address, out_erc20.contract_address, tier
             )
 
@@ -195,7 +194,7 @@ class UniswapManager:
         else:
             out_token_amount = best_quote[amount_key]
         # check balance
-        balance_manager = BalanceManager(self.config)
+        balance_manager = BalanceManager()
         if use_eth:
             eth_balance = balance_manager.get_eth_balance(wallet_address)
             if eth_balance < in_token_amount:
@@ -208,7 +207,7 @@ class UniswapManager:
                 txs.append(deposit_weth_tx)
                 nonce += 1
         # check allowance
-        router = UniswapV3Router.get_singleton(self.config)
+        router = UniswapV3Router.get_singleton()
         if not use_eth:
             allow_tx = self.check_allowance_and_approve(
                 router, in_erc20, in_token_amount, wallet_address, nonce
@@ -276,7 +275,7 @@ class UniswapManager:
         txs = []
         nonce = token0.get_nonce(wallet_address)
         # check balance
-        balance_manager = BalanceManager(self.config)
+        balance_manager = BalanceManager()
         if use_eth:
             eth_balance = balance_manager.get_eth_balance(wallet_address)
             if eth_balance < amount0:
@@ -296,7 +295,7 @@ class UniswapManager:
                 txs.append(deposit_weth_tx)
                 nonce += 1
         # check allowance
-        position_manager = UniswapV3PositionManager.get_singleton(self.config)
+        position_manager = UniswapV3PositionManager.get_singleton()
         if not use_eth or token0.get_symbol() != "WETH":
             allow_tx = self.check_allowance_and_approve(
                 position_manager, token0, amount0, wallet_address, nonce
@@ -317,7 +316,7 @@ class UniswapManager:
             token0.contract_address, token1.contract_address, fee, wallet_address
         )
         if position_id is None:
-            pool = UniswapV3Factory.get_singleton(self.config).get_pool(
+            pool = UniswapV3Factory.get_singleton().get_pool(
                 token0.contract_address, token1.contract_address, fee
             )
             tick_lower, tick_upper = position_manager.get_ticks(
@@ -362,7 +361,7 @@ class UniswapManager:
             raise UniswapManagerError(
                 f"Position with id={str(position_id)} doesn't exist"
             )
-        position_manager = UniswapV3PositionManager.get_singleton(self.config)
+        position_manager = UniswapV3PositionManager.get_singleton()
         liquidity = int(current_position.refresh().position_data['liquidity'])
         if liquidity == 0:
             raise UniswapManagerError(
@@ -424,7 +423,7 @@ class UniswapManager:
         txs = []
         nonce = token0.get_nonce(wallet_address)
         # check balance
-        balance_manager = BalanceManager(self.config)
+        balance_manager = BalanceManager()
         if use_eth:
             eth_balance = balance_manager.get_eth_balance(wallet_address)
             if eth_balance < amount0:
@@ -444,7 +443,7 @@ class UniswapManager:
                 txs.append(deposit_weth_tx)
                 nonce += 1
         # check allowance
-        position_manager = UniswapV3PositionManager.get_singleton(self.config)
+        position_manager = UniswapV3PositionManager.get_singleton()
         if not use_eth or token0.get_symbol() != "WETH":
             allow_tx = self.check_allowance_and_approve(
                 position_manager, token0, amount0, wallet_address, nonce
@@ -491,7 +490,7 @@ class UniswapManager:
             raise UniswapManagerError(
                 f"Position with id={str(position_id)} doesn't exist"
             )
-        position_manager = UniswapV3PositionManager.get_singleton(self.config)
+        position_manager = UniswapV3PositionManager.get_singleton()
         collect_tx = position_manager.collect_all(wallet_address, position_id)
         txs = [{"tx": collect_tx, "action": f"Collect liquidity for position {str(position_id)}"}]
         utils.print(f"Transactions: {len(txs)}")
@@ -518,7 +517,7 @@ class UniswapManager:
                 # deposit WETH
                 weth_amount = token_amount - in_balance
                 deposit_weth_tx = (
-                    WETH9.get_singleton(self.config)
+                    WETH9.get_singleton()
                     .set_nonce(nonce)
                     .deposit(wallet_address, weth_amount)
                 )
@@ -586,16 +585,16 @@ class UniswapManager:
             utils.print(f"Singed raw transaction:\n{raw_tx}", "info")
 
     def quote_for_in_token(self, in_erc20: ERC20, out_erc20: ERC20, amount_in: int, fee_tier: int) -> dict:
-        quoter = UniswapV3QuoterV2(self.config)
-        pool = UniswapV3Factory.get_singleton(self.config).get_pool(
+        quoter = UniswapV3QuoterV2()
+        pool = UniswapV3Factory.get_singleton().get_pool(
             in_erc20.contract_address, out_erc20.contract_address, fee_tier
         )
         res = quoter.quote_exact_input(pool, in_erc20, amount_in)
         return res
 
     def quote_for_out_token(self, in_erc20: ERC20, out_erc20: ERC20, amount_out: int, fee_tier: int) -> dict:
-        quoter = UniswapV3QuoterV2(self.config)
-        pool = UniswapV3Factory.get_singleton(self.config).get_pool(
+        quoter = UniswapV3QuoterV2()
+        pool = UniswapV3Factory.get_singleton().get_pool(
             in_erc20.contract_address, out_erc20.contract_address, fee_tier
         )
         res = quoter.quote_exact_output(pool, out_erc20, amount_out)

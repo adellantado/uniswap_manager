@@ -5,6 +5,7 @@ from web3 import Web3
 
 import utils.web3_utils as web3_utils
 from entity.cachable import Cachable
+from entity.config import Config
 
 
 class Contract(Cachable):
@@ -46,6 +47,7 @@ class Contract(Cachable):
     contract_instances: dict[str, Contract] = {}
 
     def __init__(self, contract_address: str, abi_path: str):
+        self.config = Config.get_singleton()
         self.contract_address = Web3.to_checksum_address(contract_address)
         self.abi = web3_utils.load_abi(abi_path)
         self.contract = self.web3.eth.contract(address=self.contract_address, abi=self.abi)

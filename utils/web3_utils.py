@@ -2,13 +2,14 @@ import json
 
 from web3 import Web3
 
+from entity.config import Config
 import utils.utils as utils
 
 
-def get_web3(config: dict) -> Web3:
-    is_prod = config["network"].get("prod", True)
-    return Web3(Web3.HTTPProvider(config["network"]["rpc"], 
-        cache_allowed_requests = not is_prod)
+def get_web3() -> Web3:
+    config = Config.get_singleton()
+    return Web3(Web3.HTTPProvider(config.rpc_url, 
+        cache_allowed_requests = not config.is_prod)
     )
 
 def load_abi(abi_name: str) -> dict:

@@ -67,7 +67,7 @@ class UniswapV3Position():
     def get_instance(position_manager: UniswapV3PositionManager,
             position_id: int, wallet_address: str) -> UniswapV3Position:
         position_data = position_manager.get_position_data(position_id)
-        pool = UniswapV3Factory.get_singleton(position_manager.config).get_pool(
+        pool = UniswapV3Factory.get_singleton().get_pool(
             position_data['token0'], position_data['token1'], position_data['fee']
         )
         return UniswapV3Position(position_id, wallet_address,

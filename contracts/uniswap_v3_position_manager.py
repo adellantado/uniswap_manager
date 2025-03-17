@@ -4,7 +4,6 @@ from web3 import Web3
 
 from .contract import Contract
 from .uniswap_v3_pool import UniswapV3Pool, PoolFee, PoolTickSpacing
-from .erc20 import ERC20
 import utils.web3_utils as web3_utils
 from utils.decorators import to_checksum_address
 
@@ -56,14 +55,13 @@ class UniswapV3PositionManager(Contract):
 
     instance: UniswapV3PositionManager = None 
 
-    def __init__(self, config: dict):
-        self.config = config
-        super().__init__(config['uniswap']['contracts']['position_manager'], "UniswapV3PositionManager")
+    def __init__(self):
+        super().__init__(self.config.uniswap_v3_position_manager, "UniswapV3PositionManager")
 
     @staticmethod
-    def get_singleton(config: dict) -> UniswapV3PositionManager:
+    def get_singleton() -> UniswapV3PositionManager:
         if UniswapV3PositionManager.instance is None:
-            UniswapV3PositionManager.instance = UniswapV3PositionManager(config)
+            UniswapV3PositionManager.instance = UniswapV3PositionManager()
         return UniswapV3PositionManager.instance
 
     def get_position_data(self, position_id: int) -> dict:

@@ -24,13 +24,13 @@ class UniswapV3Factory(Contract):
 
     instance: UniswapV3Factory = None 
 
-    def __init__(self, config: dict):
-        super().__init__(config['uniswap']['contracts']['factory'], "UniswapV3Factory")
+    def __init__(self):
+        super().__init__(self.config.uniswap_v3_factory, "UniswapV3Factory")
 
     @staticmethod
-    def get_singleton(config) -> UniswapV3Factory:
+    def get_singleton() -> UniswapV3Factory:
         if UniswapV3Factory.instance is None:
-            UniswapV3Factory.instance = UniswapV3Factory(config)
+            UniswapV3Factory.instance = UniswapV3Factory()
         return UniswapV3Factory.instance
 
     @to_checksum_address(1,2)

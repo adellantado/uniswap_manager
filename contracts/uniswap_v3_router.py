@@ -20,13 +20,13 @@ class UniswapV3Router(Contract):
 
     instance: UniswapV3Router = None 
 
-    def __init__(self, config: dict):
-        super().__init__(config['uniswap']['contracts']['router'], "UniswapV3SwapRouter")
+    def __init__(self):
+        super().__init__(self.config.uniswap_v3_router, "UniswapV3SwapRouter")
 
     @staticmethod
-    def get_singleton(config: dict) -> UniswapV3Router:
+    def get_singleton() -> UniswapV3Router:
         if UniswapV3Router.instance is None:
-            UniswapV3Router.instance = UniswapV3Router(config)
+            UniswapV3Router.instance = UniswapV3Router()
         return UniswapV3Router.instance
 
     @to_checksum_address(1,2,6)

@@ -7,6 +7,8 @@ from pathlib import Path
 
 import click
 
+from entity.config import Config
+
 
 def get_coin_price_usd(symbol: str) -> str:
     if symbol.upper() == "WETH":
@@ -23,21 +25,17 @@ def get_gas_price(etherscan_key: str) -> tuple[int, int, int]:
     fast_gas = response["result"]["FastGasPrice"]
     return safe_gas, propose_gas, fast_gas
 
-def get_config() -> dict:
-    with open("config/config.json", "r") as f:
-        config = json.load(f)
-    return config
+def get_config() -> Config:
+    return Config.get_singleton()
 
 def get_wallet_address(wallet: str):
-    config = get_config()
-    for alias, address in config['wallet']['addresses'].items():
+    for alias, address in Config.get_singleton().wallet_addresses.items():
         if wallet.lower() == alias.lower() or wallet.lower() == address.lower():
             return address
     return wallet
 
 def get_token_address(token: str):
-    config = get_config()
-    for alias, address in config['ERC20']['tokens'].items():
+    for alias, address in Config.get_singleton().erc20_tokens.items():
         if token.lower() == alias.lower() or token.lower() == address.lower():
             return address
     return token
@@ -69,18 +67,16 @@ def get_private_key_by_path(key_path: str, ask_passphare_directly: bool = False)
         return result.stdout.strip()
 
 def get_private_key(wallet: str):
-    config = get_config()
-    for alias, address in config['wallet']['addresses'].items():
+    for alias, address in Config.get_singleton().wallet_addresses.items():
         if wallet.lower() == alias.lower() or wallet.lower() == address.lower():
-            return get_private_key_by_path(config['wallet']['keys'][alias])
+            return get_private_key_by_path(Config.get_singleton().private_keys[alias])
     return None
 
 def print(message: str, type: str = None):
-    config = get_config()
-    if not bool(config["styles"]["active"]):
+    if not bool(Config.get_singleton().is_styles_active):
         click.secho(message)
         return
-    is_bright = bool(config["styles"]["bright"])
+    is_bright = bool(Config.get_singleton().is_styles_bright)
     colors = {
         "info": "blue",
         "warning": "yellow",
