@@ -127,7 +127,19 @@ class UniswapV3PositionManager(Contract):
 
     @to_checksum_address(4)
     def increase_liquidity(self, position_id: int, 
-            amount0_desired: int, amount1_desired: int, wallet_address: str):
+            amount0_desired: int, amount1_desired: int, wallet_address: str,
+            pass_value_for_token_0: bool = False,
+            pass_value_for_token_1: bool = False):
+        details = {
+            "from": wallet_address,
+            "nonce": self.get_nonce(wallet_address),
+            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gas": 250000,
+        }
+        if pass_value_for_token_0:
+            details["value"] = amount0_desired
+        elif pass_value_for_token_1:
+            details["value"] = amount1_desired
         tx = self.contract.functions.increaseLiquidity({
             "tokenId": position_id,
             "amount0Desired": amount0_desired,
@@ -135,25 +147,23 @@ class UniswapV3PositionManager(Contract):
             "amount0Min": 0,  # Set minimums to avoid slippage
             "amount1Min": 0,
             "deadline": web3_utils.get_tx_deadline(self.web3),
-        }).build_transaction({
-            "from": wallet_address,
-            "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
-            "gas": 250000,
-        })
+        }).build_transaction(details)
         return tx
 
     @to_checksum_address(6)
     def open_position_for_pool(self, pool: UniswapV3Pool, 
             amount0_desired: int, amount1_desired: int, 
             amount0_min: int, amount1_min: int,
-            wallet_address: str, deviation_percent: int=15):
+            wallet_address: str, deviation_percent: int=15,
+            pass_value_for_token_0: bool = False,
+            pass_value_for_token_1: bool = False):
         tick_lower, tick_upper = self.get_ticks(pool, deviation_percent)
         tx = self.open_position(
             pool.token0.contract_address, pool.token1.contract_address, 
             pool.get_fee_tier(),
             amount0_desired, amount1_desired, amount0_min, amount1_min,
-            tick_lower, tick_upper, wallet_address
+            tick_lower, tick_upper, wallet_address,
+            pass_value_for_token_0, pass_value_for_token_1
         )
         return tx
 
@@ -162,7 +172,19 @@ class UniswapV3PositionManager(Contract):
             amount0_desired: int, amount1_desired: int, 
             amount0_min: int, amount1_min: int,
             tick_lower: int, tick_upper: int, 
-            wallet_address: str):
+            wallet_address: str, 
+            pass_value_for_token_0: bool = False,
+            pass_value_for_token_1: bool = False):
+        details = {
+            "from": wallet_address,
+            "nonce": self.get_nonce(wallet_address),
+            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gas": 500000,
+        }
+        if pass_value_for_token_0:
+            details["value"] = amount0_desired
+        elif pass_value_for_token_1:
+            details["value"] = amount1_desired
         tx = self.contract.functions.mint({
             "token0": token0_address,
             "token1": token1_address,
@@ -175,12 +197,7 @@ class UniswapV3PositionManager(Contract):
             "amount1Min": amount1_min,
             "recipient": wallet_address,
             "deadline": web3_utils.get_tx_deadline(self.web3),
-        }).build_transaction({
-            "from": wallet_address,
-            "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
-            "gas": 500000,
-        })
+        }).build_transaction(details)
         return tx
     
     @to_checksum_address(2)

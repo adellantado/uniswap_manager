@@ -44,7 +44,7 @@ def balance(wallet, erc20, all):
             price = float(utils.get_coin_price_usd(symbol))
             click.echo(f'{str(amount/10**decimals)} {symbol}, {(amount/10**decimals) * price:.2f} USD')
         elif address:
-            amount = manager.get_eth_balance(address)
+            amount = manager.get_eth_balance(address, True)
             eth_price = float(utils.get_coin_price_usd('ETH'))
             click.echo(f'{str(amount)} ETH, {amount * eth_price:.2f} USD')
         elif erc20: 
@@ -100,8 +100,10 @@ def swap(in_token, out_token, wallet, estimate, send, raw):
         if in_native_amount == 0 and out_native_amount == 0:
             utils.print("Amount can't be 0 for both tokens", "error")
             exit(1)
+        in_token_name, _ = cli_utils.split_coin_name_and_amount(in_token)
+        use_eth = in_token_name == 'ETH'
         manager.swap(in_erc20, out_erc20, in_native_amount, out_native_amount, wallet_address, 
-            False if estimate else send, raw
+            use_eth, False if estimate else send, raw
         )
     except UniswapManagerError as e:
         click.echo(str(e))
@@ -122,8 +124,11 @@ def open_position(token1, token2, fee_tier, wallet, estimate, send, raw):
     try:
         _, token1_erc20, _, token1_native_amount = cli_utils.split_token_amount(token1)
         _, token2_erc20, _, token2_native_amount = cli_utils.split_token_amount(token2)
+        token1_name, _ = cli_utils.split_coin_name_and_amount(token1)
+        token2_name, _ = cli_utils.split_coin_name_and_amount(token2)
+        use_eth = token1_name == 'ETH' or token2_name == 'ETH'
         manager.open_position(token1_erc20, token2_erc20, token1_native_amount, token2_native_amount, 
-            int(fee_tier), wallet_address, False if estimate else send, raw
+            int(fee_tier), wallet_address, use_eth, False if estimate else send, raw
         )
     except UniswapManagerError as e:
         click.echo(str(e))
@@ -144,8 +149,11 @@ def add_liquidity(token1, token2, position_id, wallet, estimate, send, raw):
     try:
         _, token1_erc20, _, token1_native_amount = cli_utils.split_token_amount(token1)
         _, token2_erc20, _, token2_native_amount = cli_utils.split_token_amount(token2)
+        token1_name, _ = cli_utils.split_coin_name_and_amount(token1)
+        token2_name, _ = cli_utils.split_coin_name_and_amount(token2)
+        use_eth = token1_name == 'ETH' or token2_name == 'ETH'
         manager.add_liqudity(token1_erc20, token2_erc20, token1_native_amount, token2_native_amount, 
-            int(position_id), wallet_address, False if estimate else send, raw
+            int(position_id), wallet_address, use_eth, False if estimate else send, raw
         )
     except UniswapManagerError as e:
         click.echo(str(e))
@@ -206,7 +214,7 @@ def send(token, wallet_from, wallet_to, estimate, send, raw):
             if amount == 0:
                 utils.print("Amount can't be 0", "error")
                 exit(1)
-            balance = manager.get_eth_balance(wallet_from_address)
+            balance = manager.get_eth_balance(wallet_from_address, True)
             if balance < amount:
                 utils.print(f"Insufficient balance. Available: {balance} ETH", "error")
                 exit(1)

@@ -140,11 +140,14 @@ class UniswapManager:
         in_token_amount: int,
         out_token_amount: int,
         wallet_address: str,
-        send=False,
-        raw=False,
+        use_eth: bool = False,
+        send: bool = False,
+        raw: bool = False,
     ):
         if in_erc20 == out_erc20:
             raise UniswapManagerError("Tokens must be different")
+        if in_erc20.get_symbol() != "WETH" and use_eth:
+            raise UniswapManagerError("Input token must be WETH to use ETH")
         wallet_address = str(self.web3.to_checksum_address(wallet_address))
         txs = []
         nonce = in_erc20.get_nonce(wallet_address)
@@ -193,20 +196,26 @@ class UniswapManager:
             out_token_amount = best_quote[amount_key]
         # check balance
         balance_manager = BalanceManager(self.config)
-        deposit_weth_tx = self.check_balance_and_deposit_token(
-            balance_manager, in_erc20, wallet_address, in_token_amount, nonce
-        )
-        if deposit_weth_tx is not None:
-            txs.append(deposit_weth_tx)
-            nonce += 1
+        if use_eth:
+            eth_balance = balance_manager.get_eth_balance(wallet_address)
+            if eth_balance < in_token_amount:
+                raise UniswapManagerError(f"Insufficient balance: {eth_balance} ETH")
+        else:
+            deposit_weth_tx = self.check_balance_and_deposit_token(
+                balance_manager, in_erc20, wallet_address, in_token_amount, nonce
+            )
+            if deposit_weth_tx is not None:
+                txs.append(deposit_weth_tx)
+                nonce += 1
         # check allowance
         router = UniswapV3Router.get_singleton(self.config)
-        allow_tx = self.check_allowance_and_approve(
-            router, in_erc20, in_token_amount, wallet_address, nonce
-        )
-        if allow_tx is not None:
-            txs.append(allow_tx)
-            nonce += 1
+        if not use_eth:
+            allow_tx = self.check_allowance_and_approve(
+                router, in_erc20, in_token_amount, wallet_address, nonce
+            )
+            if allow_tx is not None:
+                txs.append(allow_tx)
+                nonce += 1
         # swap
         swap_tx = None
         if send or raw:
@@ -218,6 +227,7 @@ class UniswapManager:
                     out_token_amount,
                     fee_tier,
                     wallet_address,
+                    use_eth,
                 )
             else:
                 swap_tx = router.set_nonce(nonce).swap_in_max(
@@ -227,6 +237,7 @@ class UniswapManager:
                     out_token_amount,
                     fee_tier,
                     wallet_address,
+                    use_eth,
                 )
         txs.append(
             {
@@ -251,44 +262,55 @@ class UniswapManager:
         amount1: int,
         fee: int,
         wallet_address: str,
-        send=False,
-        raw=False,
+        use_eth: bool = False,
+        send: bool = False,
+        raw: bool = False,
     ):
         if token0 == token1:
             raise UniswapManagerError("Tokens must be different")
         if fee not in [item.value for item in PoolFee]:
             raise UniswapManagerError(f"Invalid fee tier: {fee}")
+        if use_eth and (token0.get_symbol() != "WETH" and token1.get_symbol() != "WETH"):
+            raise UniswapManagerError("Input or output token must be WETH to use ETH")
         wallet_address = str(self.web3.to_checksum_address(wallet_address))
         txs = []
         nonce = token0.get_nonce(wallet_address)
         # check balance
         balance_manager = BalanceManager(self.config)
-        deposit_weth_tx = self.check_balance_and_deposit_token(
-            balance_manager, token0, wallet_address, amount0, nonce
-        )
-        if deposit_weth_tx is not None:
-            txs.append(deposit_weth_tx)
-            nonce += 1
-        deposit_weth_tx = self.check_balance_and_deposit_token(
-            balance_manager, token1, wallet_address, amount1, nonce
-        )
-        if deposit_weth_tx is not None:
-            txs.append(deposit_weth_tx)
-            nonce += 1
+        if use_eth:
+            eth_balance = balance_manager.get_eth_balance(wallet_address)
+            if eth_balance < amount0:
+                raise UniswapManagerError(f"Insufficient balance: {eth_balance} ETH")
+        if not use_eth or token0.get_symbol() != "WETH":
+            deposit_weth_tx = self.check_balance_and_deposit_token(
+                balance_manager, token0, wallet_address, amount0, nonce
+            )
+            if deposit_weth_tx is not None:
+                txs.append(deposit_weth_tx)
+                nonce += 1
+        if not use_eth or token1.get_symbol() != "WETH":
+            deposit_weth_tx = self.check_balance_and_deposit_token(
+                balance_manager, token1, wallet_address, amount1, nonce
+            )
+            if deposit_weth_tx is not None:
+                txs.append(deposit_weth_tx)
+                nonce += 1
         # check allowance
         position_manager = UniswapV3PositionManager.get_singleton(self.config)
-        allow_tx = self.check_allowance_and_approve(
-            position_manager, token0, amount0, wallet_address, nonce
-        )
-        if allow_tx is not None:
-            txs.append(allow_tx)
-            nonce += 1
-        allow_tx = self.check_allowance_and_approve(
-            position_manager, token1, amount1, wallet_address, nonce
-        )
-        if allow_tx is not None:
-            txs.append(allow_tx)
-            nonce += 1
+        if not use_eth or token0.get_symbol() != "WETH":
+            allow_tx = self.check_allowance_and_approve(
+                position_manager, token0, amount0, wallet_address, nonce
+            )
+            if allow_tx is not None:
+                txs.append(allow_tx)
+                nonce += 1
+        if not use_eth or token1.get_symbol() != "WETH":
+            allow_tx = self.check_allowance_and_approve(
+                position_manager, token1, amount1, wallet_address, nonce
+            )
+            if allow_tx is not None:
+                txs.append(allow_tx)
+                nonce += 1
         # create new position
         price_deviation_percents = 15
         position_id = position_manager.get_position_id(
@@ -312,6 +334,8 @@ class UniswapManager:
                 tick_lower,
                 tick_upper,
                 wallet_address,
+                use_eth and token0.get_symbol() == "WETH",
+                use_eth and token1.get_symbol() == "WETH",
             )
             txs.append({"tx": open_tx, "action": f"Create position"})
             nonce += 1
@@ -369,11 +393,14 @@ class UniswapManager:
         amount1: int,
         position_id: int,
         wallet_address: str,
+        use_eth: bool = False,
         send=False,
         raw=False,
     ):
         if token0 == token1:
             raise UniswapManagerError("Tokens must be different")
+        if use_eth and (token0.get_symbol() != "WETH" and token1.get_symbol() != "WETH"):
+            raise UniswapManagerError("Input or output token must be WETH to use ETH")
         current_position = None
         positions = self.get_list_of_positions(refresh_data=False)
         for wallet, wallet_positions in positions.items():
@@ -398,34 +425,49 @@ class UniswapManager:
         nonce = token0.get_nonce(wallet_address)
         # check balance
         balance_manager = BalanceManager(self.config)
-        deposit_weth_tx = self.check_balance_and_deposit_token(
-            balance_manager, token0, wallet_address, amount0, nonce
-        )
-        if deposit_weth_tx is not None:
-            txs.append(deposit_weth_tx)
-            nonce += 1
-        deposit_weth_tx = self.check_balance_and_deposit_token(
-            balance_manager, token1, wallet_address, amount1, nonce
-        )
-        if deposit_weth_tx is not None:
-            txs.append(deposit_weth_tx)
-            nonce += 1
+        if use_eth:
+            eth_balance = balance_manager.get_eth_balance(wallet_address)
+            if eth_balance < amount0:
+                raise UniswapManagerError(f"Insufficient balance: {eth_balance} ETH")
+        if not use_eth or token0.get_symbol() != "WETH":
+            deposit_weth_tx = self.check_balance_and_deposit_token(
+                balance_manager, token0, wallet_address, amount0, nonce
+            )
+            if deposit_weth_tx is not None:
+                txs.append(deposit_weth_tx)
+                nonce += 1
+        if not use_eth or token1.get_symbol() != "WETH":
+            deposit_weth_tx = self.check_balance_and_deposit_token(
+                balance_manager, token1, wallet_address, amount1, nonce
+            )
+            if deposit_weth_tx is not None:
+                txs.append(deposit_weth_tx)
+                nonce += 1
         # check allowance
         position_manager = UniswapV3PositionManager.get_singleton(self.config)
-        allow_tx = self.check_allowance_and_approve(
-            position_manager, token0, amount0, wallet_address, nonce
-        )
-        if allow_tx is not None:
-            txs.append(allow_tx)
-            nonce += 1
-        allow_tx = self.check_allowance_and_approve(
-            position_manager, token1, amount1, wallet_address, nonce
-        )
-        if allow_tx is not None:
-            txs.append(allow_tx)
-            nonce += 1
+        if not use_eth or token0.get_symbol() != "WETH":
+            allow_tx = self.check_allowance_and_approve(
+                position_manager, token0, amount0, wallet_address, nonce
+            )
+            if allow_tx is not None:
+                txs.append(allow_tx)
+                nonce += 1
+        if not use_eth or token1.get_symbol() != "WETH":
+            allow_tx = self.check_allowance_and_approve(
+                position_manager, token1, amount1, wallet_address, nonce
+            )
+            if allow_tx is not None:
+                txs.append(allow_tx)
+                nonce += 1
         # add liquidity to the position
-        inc_liq_tx = position_manager.set_nonce(nonce).increase_liquidity(position_id, amount0, amount1, wallet_address)
+        inc_liq_tx = position_manager.set_nonce(nonce).increase_liquidity(
+            position_id, 
+            amount0, 
+            amount1, 
+            wallet_address,
+            use_eth and token0.get_symbol() == "WETH",
+            use_eth and token1.get_symbol() == "WETH",
+        )
         txs.append({"tx": inc_liq_tx, "action": f"Increse liquidity for position {position_id}"})
         nonce += 1
         utils.print(f"Transactions: {len(txs)}")
