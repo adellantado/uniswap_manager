@@ -13,7 +13,6 @@ from contracts.uniswap_v3_quoter_v2 import UniswapV3QuoterV2
 from contracts.erc20 import ERC20
 from contracts.weth9 import WETH9
 from contracts.contract import Contract
-import utils.web3_utils as web3_utils
 import utils.utils as utils
 from .balance_manager import BalanceManager
 
@@ -40,7 +39,7 @@ class UniswapManager:
 
     def __init__(self):
         self.config = Config.get_singleton()
-        self.web3 = web3_utils.get_web3()
+        self.web3 = utils.get_web3()
         Contract.web3 = self.web3
         self.position_manager = UniswapV3PositionManager.get_singleton()
 
@@ -57,6 +56,8 @@ class UniswapManager:
             position_ids = self.position_manager.get_position_ids(wallet_address)
             positions_per_address = {}
             for position_id in position_ids:
+                if wallet_address not in all_positions.keys():
+                    all_positions[wallet_address] = {}
                 if position_id not in all_positions[wallet_address].keys():
                     position = UniswapV3Position.get_instance(
                         self.position_manager, position_id, wallet_address
@@ -111,19 +112,13 @@ class UniswapManager:
                 )
                 token0_amount, token1_amount = position.get_total_locked_amount()
                 utils.print(
-                    "Locked: ",
-                    token0_amount,
-                    position.get_token0().get_symbol(),
-                    token1_amount,
-                    position.get_token1().get_symbol(),
+                    f"Locked: {token0_amount} {position.get_token0().get_symbol()} "
+                    f"{token1_amount} {position.get_token1().get_symbol()}"
                 )
                 token0_fee, token1_fee = position.get_total_fees_collected()
                 utils.print(
-                    "Fees: ",
-                    token0_fee,
-                    position.get_token0().get_symbol(),
-                    token1_fee,
-                    position.get_token1().get_symbol(),
+                    f"Fees: {token0_fee} {position.get_token0().get_symbol()}"
+                    f"{token1_fee} {position.get_token1().get_symbol()}"
                 )
                 utils.print(
                     f"{position.name} APY: {apy:.2f}%, {position_days} days,"
@@ -551,7 +546,7 @@ class UniswapManager:
             }
 
     def estimate_txs(self, txs: list[dict]):
-        gas_price = web3_utils.get_gas_price(self.web3)
+        gas_price = utils.get_gas_price(self.web3)
         eth_price = float(utils.get_coin_price_usd("ETH"))
         price = self.web3.from_wei(gas_price,"gwei")
         for i, tx in enumerate(txs):
@@ -560,7 +555,7 @@ class UniswapManager:
                 if 'gas' in tx:
                     gas_units = tx['gas']
                 else:
-                    gas_units = web3_utils.estimate_tx_gas(self.web3, tx["tx"])
+                    gas_units = utils.estimate_tx_gas(self.web3, tx["tx"])
                 costs = self.web3.from_wei(gas_price * gas_units, "gwei")
                 utils.print(
                     f"{str(gas_units)} units for {price:.2f} Gwei -> "
@@ -581,7 +576,7 @@ class UniswapManager:
     def get_raw_txs(self, txs: list[dict], wallet_address: str):
         for i, tx in enumerate(txs):
             utils.print(f"{i+1}.  {tx['action']}")
-            raw_tx = web3_utils.sign_and_get_raw_tx(self.web3, tx["tx"], wallet_address)
+            raw_tx = utils.sign_and_get_raw_tx(self.web3, tx["tx"], wallet_address)
             utils.print(f"Singed raw transaction:\n{raw_tx}", "info")
 
     def quote_for_in_token(self, in_erc20: ERC20, out_erc20: ERC20, amount_in: int, fee_tier: int) -> dict:

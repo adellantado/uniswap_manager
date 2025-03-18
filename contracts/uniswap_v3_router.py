@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 
 from .contract import Contract
-import utils.web3_utils as web3_utils
+import utils.utils as utils
 from utils.decorators import to_checksum_address
 
 
@@ -35,7 +35,7 @@ class UniswapV3Router(Contract):
         details = {
             "from": wallet_address,
             "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gasPrice": utils.get_gas_price(self.web3),
             "gas": 200000,
         }
         if pass_value_for_in_token:
@@ -45,7 +45,7 @@ class UniswapV3Router(Contract):
             "tokenOut": self.web3.to_checksum_address(out_token_address),
             "fee": fee_tier,
             "recipient": wallet_address,
-            "deadline": web3_utils.get_tx_deadline(self.web3),
+            "deadline": utils.get_tx_deadline(self.web3),
             "amountIn": in_token_amount,
             "amountOutMinimum": out_token_amount_min,
             "sqrtPriceLimitX96": 0  # No price limit
@@ -58,7 +58,7 @@ class UniswapV3Router(Contract):
         details = {
             "from": wallet_address,
             "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gasPrice": utils.get_gas_price(self.web3),
             "gas": 200000,
         }
         if pass_value_for_in_token:
@@ -68,7 +68,7 @@ class UniswapV3Router(Contract):
             "tokenOut": self.web3.to_checksum_address(out_token_address),
             "fee": fee_tier,
             "recipient": wallet_address,
-            "deadline": web3_utils.get_tx_deadline(self.web3),
+            "deadline": utils.get_tx_deadline(self.web3),
             "amountOut": out_token_amount,
             "amountInMaximum": in_token_amount_min,
             "sqrtPriceLimitX96": 0  # No price limit

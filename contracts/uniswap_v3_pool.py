@@ -4,7 +4,7 @@ import enum
 from .contract import Contract
 from .erc20 import ERC20
 from utils.decorators import cache
-import utils.web3_utils as web3_utils
+import utils.utils as utils
 
 
 class UniswapV3Pool(Contract):

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .contract import Contract
-import utils.web3_utils as web3_utils
+import utils.utils as utils
 from utils.decorators import to_checksum_address, cache
 
 
@@ -63,7 +63,7 @@ class ERC20(Contract):
     def approve(self, wallet_address: str, spender_address: str, amount: int):
         tx = self.contract.functions.approve(spender_address, amount).build_transaction({
             "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gasPrice": utils.get_gas_price(self.web3),
             "gas": 100000,
         })
         return tx
@@ -72,7 +72,7 @@ class ERC20(Contract):
     def transfer(self, wallet_address: str, to_address: str, amount: int):
         tx = self.contract.functions.transfer(to_address, amount).build_transaction({
             "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gasPrice": utils.get_gas_price(self.web3),
             "gas": 100000,
         })
         return tx

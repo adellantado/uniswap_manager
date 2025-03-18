@@ -8,7 +8,7 @@ from contracts.uniswap_v3_position_manager import UniswapV3PositionManager
 from contracts.uniswap_v3_pool import UniswapV3Pool
 from contracts.uniswap_v3_factory import UniswapV3Factory
 from contracts.erc20 import ERC20
-import utils.web3_utils as web3_utils 
+import utils.utils as utils
 
 
 class UniswapV3Position():
@@ -113,10 +113,10 @@ class UniswapV3Position():
                 "toBlock": end_block,
                 "address": self.position_manager.contract_address,
                 "topics": [
-                    web3_utils.get_topic_keccak_hex("Transfer(address,address,uint256)"),
+                    utils.get_topic_keccak_hex("Transfer(address,address,uint256)"),
                     None,
-                    web3_utils.get_topic_hex(self.wallet_address.lower()),
-                    web3_utils.get_topic_hex(Web3.to_hex(self.position_id))
+                    utils.get_topic_hex(self.wallet_address.lower()),
+                    utils.get_topic_hex(Web3.to_hex(self.position_id))
                 ]
             })
             if logs:

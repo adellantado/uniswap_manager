@@ -3,7 +3,6 @@ from web3.exceptions import ContractLogicError
 
 from contracts.contract import Contract
 from contracts.erc20 import ERC20
-import utils.web3_utils as web3_utils
 import utils.utils as utils
 from utils.decorators import to_checksum_address
 
@@ -21,13 +20,13 @@ class BalanceManager:
     """
 
     def __init__(self):
-        self.web3 = web3_utils.get_web3()
+        self.web3 = utils.get_web3()
         Contract.web3 = self.web3
 
     def get_eth_balance(self, wallet_address: str, readable = False) -> float:
         if readable:
-            return web3_utils.get_eth_balance(self.web3, wallet_address) / 10**18
-        return web3_utils.get_eth_balance(self.web3, wallet_address)
+            return utils.get_eth_balance(self.web3, wallet_address) / 10**18
+        return utils.get_eth_balance(self.web3, wallet_address)
     
     def get_token_balance(self, wallet_address: str, token_address: str) -> float:
         contract = ERC20.get_instance(token_address)
@@ -43,21 +42,21 @@ class BalanceManager:
             "value": int(amount*10**18),
             "gas": 21000,
             "nonce": self.web3.eth.get_transaction_count(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gasPrice": utils.get_gas_price(self.web3),
         }
         if raw:
-            raw_tx = web3_utils.sign_and_get_raw_tx(self.web3, tx, wallet_address)
+            raw_tx = utils.sign_and_get_raw_tx(self.web3, tx, wallet_address)
             utils.print(f"Transfer {amount} ETH to {receiver_address}")
             utils.print(f"Singed raw transaction:\n{raw_tx}", "info")
         elif send:
-            tx_hash = web3_utils.sign_and_send_tx(self.web3, tx, wallet_address)
+            tx_hash = utils.sign_and_send_tx(self.web3, tx, wallet_address)
             utils.print(f"Transaction hash: {tx_hash.hex()}", "success")
         else:
-            gas_price = web3_utils.get_gas_price(self.web3)
+            gas_price = utils.get_gas_price(self.web3)
             eth_price = float(utils.get_coin_price_usd("ETH"))
             try:
                 utils.print(f"Transfer {amount} ETH to {receiver_address}")
-                gas_units = web3_utils.estimate_tx_gas(self.web3, tx)
+                gas_units = utils.estimate_tx_gas(self.web3, tx)
                 price = self.web3.from_wei(gas_price,"gwei")
                 costs = self.web3.from_wei(gas_price * gas_units, "gwei")
                 utils.print(
@@ -71,19 +70,19 @@ class BalanceManager:
     def send_token(self, wallet_address: str, receiver_address: str, token: ERC20, amount: int, send: bool = False, raw: bool = False):
         tx = token.transfer(wallet_address, receiver_address, amount)
         if raw:
-            raw_tx = web3_utils.sign_and_get_raw_tx(self.web3, tx, wallet_address)
+            raw_tx = utils.sign_and_get_raw_tx(self.web3, tx, wallet_address)
             utils.print(f"Transfer {amount} {token.get_symbol()} to {receiver_address}")
             utils.print(f"Singed raw transaction:\n{raw_tx}", "info")
         elif send:
-            tx_hash = web3_utils.sign_and_send_tx(self.web3, tx, wallet_address)
+            tx_hash = utils.sign_and_send_tx(self.web3, tx, wallet_address)
             utils.print(f"Transaction hash: {tx_hash.hex()}", "success")
         else:
-            gas_price = web3_utils.get_gas_price(self.web3)
+            gas_price = utils.get_gas_price(self.web3)
             eth_price = float(utils.get_coin_price_usd("ETH"))
             price = self.web3.from_wei(gas_price,"gwei")
             try:
                 utils.print(f"Transfer {amount} {token.get_symbol()} to {receiver_address}")
-                gas_units = web3_utils.estimate_tx_gas(self.web3, tx)
+                gas_units = utils.estimate_tx_gas(self.web3, tx)
                 costs = self.web3.from_wei(gas_price * gas_units, "gwei")
                 utils.print(
                     f"{str(gas_units)} units for {price:.2f} Gwei -> "

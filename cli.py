@@ -5,7 +5,6 @@ from contracts.erc20 import ERC20
 from manager.balance_manager import BalanceManager
 from manager.uniswap_manager import UniswapManager, UniswapManagerError
 import utils.utils as utils
-import utils.web3_utils as web3_utils
 import utils.cli_utils as cli_utils
 from utils.decorators import to_checksum_address
 
@@ -58,7 +57,7 @@ def balance(wallet, erc20, all):
     if wallet:
         # check wallet address alias from config
         address = utils.get_wallet_address(wallet)
-        web3_utils.raise_address_not_valid(manager.web3, address)
+        utils.raise_address_not_valid(manager.web3, address)
     else:
         address = wallet
     if erc20:
@@ -90,7 +89,7 @@ def price(symbol):
 def swap(in_token, out_token, wallet, estimate, send, raw):
     wallet_address = utils.get_wallet_address(wallet)
     manager = UniswapManager()
-    web3_utils.raise_address_not_valid(manager.web3, wallet_address)
+    utils.raise_address_not_valid(manager.web3, wallet_address)
     try:
         _, in_erc20, _, in_native_amount = cli_utils.split_token_amount(in_token)
         _, out_erc20, _, out_native_amount = cli_utils.split_token_amount(out_token)
@@ -117,7 +116,7 @@ def swap(in_token, out_token, wallet, estimate, send, raw):
 def open_position(token1, token2, fee_tier, wallet, estimate, send, raw):
     wallet_address = utils.get_wallet_address(wallet)
     manager = UniswapManager()
-    web3_utils.raise_address_not_valid(manager.web3, wallet_address)
+    utils.raise_address_not_valid(manager.web3, wallet_address)
     try:
         _, token1_erc20, _, token1_native_amount = cli_utils.split_token_amount(token1)
         _, token2_erc20, _, token2_native_amount = cli_utils.split_token_amount(token2)
@@ -142,10 +141,10 @@ def open_position(token1, token2, fee_tier, wallet, estimate, send, raw):
 def add_liquidity(token1, token2, position_id, wallet, estimate, send, raw):
     wallet_address = utils.get_wallet_address(wallet)
     manager = UniswapManager()
-    web3_utils.raise_address_not_valid(manager.web3, wallet_address)
+    utils.raise_address_not_valid(manager.web3, wallet_address)
     try:
-        _, token1_erc20, _, token1_native_amount = cli_utils.split_token_amount(token1)
-        _, token2_erc20, _, token2_native_amount = cli_utils.split_token_amount(token2)
+        _, token1_erc20, _, token1_native_amount = utils.split_token_amount(token1)
+        _, token2_erc20, _, token2_native_amount = utils.split_token_amount(token2)
         token1_name, _ = cli_utils.split_coin_name_and_amount(token1)
         token2_name, _ = cli_utils.split_coin_name_and_amount(token2)
         use_eth = token1_name == 'ETH' or token2_name == 'ETH'
@@ -184,7 +183,7 @@ def collect_fees(position_id, estimate, send, raw):
 
 @click.command(help="Prints network info")
 def net():
-    web3 = web3_utils.get_web3()
+    web3 = utils.get_web3()
     click.echo(f"Connection: {'🟢 Connected' if web3.is_connected() else '🔴 No connection'}")
     click.echo(f"Gas price: {web3.from_wei(web3.eth.gas_price, 'gwei'):.2f} Gwei")
     click.echo(f"Chain ID: {web3.eth.chain_id}")
@@ -202,8 +201,8 @@ def send(token, wallet_from, wallet_to, estimate, send, raw):
     wallet_from_address = utils.get_wallet_address(wallet_from)
     wallet_to_address = utils.get_wallet_address(wallet_to)
     manager = BalanceManager()
-    web3_utils.raise_address_not_valid(manager.web3, wallet_from_address)
-    web3_utils.raise_address_not_valid(manager.web3, wallet_to_address)
+    utils.raise_address_not_valid(manager.web3, wallet_from_address)
+    utils.raise_address_not_valid(manager.web3, wallet_to_address)
     try:
         if token[:3].upper() == 'ETH':
             _, amount = cli_utils.split_coin_name_and_amount(token)
@@ -216,7 +215,7 @@ def send(token, wallet_from, wallet_to, estimate, send, raw):
                 exit(1)
             manager.send_eth(wallet_from_address, wallet_to_address, amount, False if estimate else send, raw)
         else:
-            _, erc20, _, native_amount = cli_utils.split_token_amount(token)
+            _, erc20, _, native_amount = utils.split_token_amount(token)
             if native_amount == 0:
                 utils.print("Amount can't be 0", "error")
                 exit(1)
@@ -232,7 +231,7 @@ def send(token, wallet_from, wallet_to, estimate, send, raw):
 @click.command("send-raw-tx", help="Send raw transaction")
 @click.argument('tx')
 def send_raw_tx(tx):
-    web3 = web3_utils.get_web3()
+    web3 = utils.get_web3()
     tx_hash = web3.eth.send_raw_transaction(tx)
     utils.print(f"Transaction hash: {tx_hash.hex()}", "success")
 

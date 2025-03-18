@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .contract import Contract
-import utils.web3_utils as web3_utils
+import utils.utils as utils
 from utils.decorators import to_checksum_address
 
 
@@ -30,7 +30,7 @@ class WETH9(Contract):
         tx = self.contract.functions.deposit().build_transaction({
             "from": wallet_address,
             "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gasPrice": utils.get_gas_price(self.web3),
             "gas": 100000,
             "value": amount,
         })

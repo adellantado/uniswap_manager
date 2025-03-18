@@ -4,7 +4,7 @@ from web3 import Web3
 
 from .contract import Contract
 from .uniswap_v3_pool import UniswapV3Pool, PoolFee, PoolTickSpacing
-import utils.web3_utils as web3_utils
+import utils.utils as utils
 from utils.decorators import to_checksum_address
 
 
@@ -102,7 +102,7 @@ class UniswapV3PositionManager(Contract):
         }).build_transaction({
             "from": wallet_address,
             "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gasPrice": utils.get_gas_price(self.web3),
             "gas": 200000,
         })
         return tx
@@ -114,11 +114,11 @@ class UniswapV3PositionManager(Contract):
             "liquidity": liquidity,
             "amount0Min": 0,  # Set minimums to avoid slippage
             "amount1Min": 0,
-            "deadline": web3_utils.get_tx_deadline(self.web3),
+            "deadline": utils.get_tx_deadline(self.web3),
         }).build_transaction({
             "from": wallet_address,
             "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gasPrice": utils.get_gas_price(self.web3),
             "gas": 250000,
         })
         return tx
@@ -131,7 +131,7 @@ class UniswapV3PositionManager(Contract):
         details = {
             "from": wallet_address,
             "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gasPrice": utils.get_gas_price(self.web3),
             "gas": 250000,
         }
         if pass_value_for_token_0:
@@ -144,7 +144,7 @@ class UniswapV3PositionManager(Contract):
             "amount1Desired": amount1_desired,
             "amount0Min": 0,  # Set minimums to avoid slippage
             "amount1Min": 0,
-            "deadline": web3_utils.get_tx_deadline(self.web3),
+            "deadline": utils.get_tx_deadline(self.web3),
         }).build_transaction(details)
         return tx
 
@@ -176,7 +176,7 @@ class UniswapV3PositionManager(Contract):
         details = {
             "from": wallet_address,
             "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gasPrice": utils.get_gas_price(self.web3),
             "gas": 500000,
         }
         if pass_value_for_token_0:
@@ -194,7 +194,7 @@ class UniswapV3PositionManager(Contract):
             "amount0Min": amount0_min,
             "amount1Min": amount1_min,
             "recipient": wallet_address,
-            "deadline": web3_utils.get_tx_deadline(self.web3),
+            "deadline": utils.get_tx_deadline(self.web3),
         }).build_transaction(details)
         return tx
     
@@ -203,7 +203,7 @@ class UniswapV3PositionManager(Contract):
         tx = self.contract.functions.burn(position_id).build_transaction({
             "from": wallet_address,
             "nonce": self.get_nonce(wallet_address),
-            "gasPrice": web3_utils.get_gas_price(self.web3),
+            "gasPrice": utils.get_gas_price(self.web3),
             "gas": 100000,
         })
         return tx

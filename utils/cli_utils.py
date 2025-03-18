@@ -1,6 +1,6 @@
-import utils.utils as utils
 from contracts.erc20 import ERC20
 from contracts.contract import Contract
+import utils.utils as utils
 
 
 def split_token_amount(token: str) -> tuple[str, Contract, float, int]:
