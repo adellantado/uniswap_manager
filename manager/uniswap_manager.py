@@ -55,10 +55,10 @@ class UniswapManager:
             wallet_address = str(self.web3.to_checksum_address(wallet_address))
             position_ids = self.position_manager.get_position_ids(wallet_address)
             positions_per_address = {}
+            if wallet_address not in all_positions:
+                all_positions[wallet_address] = positions_per_address
             for position_id in position_ids:
-                if wallet_address not in all_positions.keys():
-                    all_positions[wallet_address] = {}
-                if position_id not in all_positions[wallet_address].keys():
+                if position_id not in all_positions[wallet_address]:
                     position = UniswapV3Position.get_instance(
                         self.position_manager, position_id, wallet_address
                     )
@@ -87,6 +87,8 @@ class UniswapManager:
     def print_positions(self):
         all_positions = self.get_list_of_positions()
         for wallet_address, positions in all_positions.items():
+            if wallet_address not in self.config.wallet_addresses.values():
+                continue
             wallet_title = wallet_address
             for wallet_name, wa in self.config.wallet_addresses.items():
                 if wallet_address.lower() == wa.lower():
@@ -372,6 +374,40 @@ class UniswapManager:
         collect_tx = position_manager.set_nonce(nonce).burn(position_id, wallet_address)
         txs.append({"tx": collect_tx, "action": f"Burn position {str(position_id)} completely"})
         utils.print(f"Transactions: {len(txs)}")
+        if raw:
+            self.get_raw_txs(txs, wallet_address)
+        elif send:
+            self.send_txs(txs, position_manager, wallet_address)
+        else:
+            self.estimate_txs(txs)
+
+    def remove_liquidity(self, position_id: int, decrease_percents: int, send=False, raw=False):
+        if decrease_percents <= 0 or decrease_percents > 100:
+            raise UniswapManagerError("Decrease percents must be in range 1-100")
+        current_position = None
+        wallet_address = None
+        positions = self.get_list_of_positions(refresh_data=False)
+        for wallet, wallet_positions in positions.items():
+            if position_id in wallet_positions.keys():
+                current_position = wallet_positions[position_id]
+                wallet_address = str(self.web3.to_checksum_address(wallet))
+                break
+        if current_position is None:
+            raise UniswapManagerError(
+                f"Position with id={str(position_id)} doesn't exist"
+            )
+        position_manager = UniswapV3PositionManager.get_singleton()
+        liquidity = int(current_position.refresh().position_data['liquidity'])
+        if liquidity == 0:
+            raise UniswapManagerError(
+                f"Position with id={str(position_id)} already closed"
+            )
+        nonce = position_manager.get_nonce(wallet_address)
+        dec_liq_tx = position_manager.set_nonce(nonce).decrease_liquidity(position_id, int(liquidity*decrease_percents/100), wallet_address)
+        txs = [{"tx": dec_liq_tx, "action": f"Remove liquidity for position {str(position_id)}"}]
+        nonce += 1
+        collect_tx = position_manager.set_nonce(nonce).collect_all(wallet_address, position_id)
+        txs.append({"tx": collect_tx, "action": f"Collect liquidity for position {str(position_id)}"})
         if raw:
             self.get_raw_txs(txs, wallet_address)
         elif send:

@@ -106,8 +106,8 @@ class UniswapV3Position():
             return self.creation_date
         latest_block = self.web3.eth.block_number
         all_logs = []
-        for start_block in range(from_block, latest_block, chunk_size):
-            end_block = min(start_block + chunk_size - 1, latest_block)
+        for end_block in range(latest_block, from_block, -chunk_size):
+            start_block = max(end_block - chunk_size + 1, from_block)
             logs = self.web3.eth.get_logs({
                 "fromBlock": start_block,
                 "toBlock": end_block,

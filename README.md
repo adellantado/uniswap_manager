@@ -16,17 +16,18 @@
 ## Commands ⬇️
 
 ```
-  add-liquidity   Add liquidity to a Uniswap V3 pool
-  balance         Prints balance of ETH/ERC20 token for addresses in the...
-  close-position  Close Uniswap V3 position
-  collect-fees    Collect fees from Uniswap V3 position
-  net             Prints network info
-  open-position   Open Uniswap V3 position
-  positions       Prints Uniswap V3 positions for addresses in the config
-  price           Prints Binance price of a given coin in USD
-  send            Send ETH/ERC20 tokens to another wallet e.g.
-  send-raw-tx     Send raw transaction
-  swap            Swap ERC20 tokens using Uniswap V3.
+  add-liquidity     Add liquidity to a Uniswap V3 pool
+  balance           Prints balance of ETH/ERC20 token for addresses in the config
+  close-position    Close Uniswap V3 position
+  collect-fees      Collect fees from Uniswap V3 position
+  net               Prints network info
+  open-position     Open Uniswap V3 position
+  positions         Prints Uniswap V3 positions for addresses in the config
+  price             Prints Binance price of a given coin in USD
+  remove-liquidity  Decrease liquidity from Uniswap V3 position
+  send              Send ETH/ERC20 tokens to another wallet
+  send-raw-tx       Send raw transaction
+  swap              Swap ERC20 tokens using Uniswap V3.
 ```
 
 ### 1. Wallet balance 👛
@@ -162,7 +163,7 @@ Example:
 
 >Transaction hash: b416fcd675b9cdb2e1fd2718b0cc85f8eb289595e741bc6aaba83eeb8de8e3eb
 
-### 8. Close position ✖️
+### 8. Close position 🗑
 ```
 Usage: bum close-position [OPTIONS] POSITION_ID
 
@@ -201,7 +202,22 @@ Options:
   --help          Show this message and exit.
 ```
 
-### 11. Send raw transaction 🎯
+### 11. Remove liquidity ➖
+```
+Usage: bum remove-liquidity [OPTIONS] POSITION_ID
+
+  Decrease liquidity from Uniswap V3 position
+
+Options:
+  -percent, -p TEXT  Percentage of liquidity to remove, from 1 to 100
+                     [required]
+  -e, --estimate     Estimate transactions
+  -s, --send         Sing and send transactions
+  -r, --raw          Sing and return raw transaction
+  --help             Show this message and exit.
+```
+
+### 12. Send raw transaction 🎯
 ```
 Usage: bum send-raw-tx [OPTIONS] TX
 

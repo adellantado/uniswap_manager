@@ -1,7 +1,6 @@
 from web3.exceptions import ContractLogicError
 import click
 
-from contracts.erc20 import ERC20
 from manager.balance_manager import BalanceManager
 from manager.uniswap_manager import UniswapManager, UniswapManagerError
 import utils.utils as utils
@@ -66,7 +65,6 @@ def balance(wallet, erc20, all):
         if erc20 in config.erc20_tokens:
             erc20 = config.erc20_tokens[erc20]
     get_balance_rec(address, erc20, all)
-
 
 @click.command(help="Prints Uniswap V3 positions for addresses in the config")
 def positions():
@@ -168,6 +166,20 @@ def close_position(position_id, estimate, send, raw):
         click.echo(str(e))
         exit(1)
 
+@click.command("remove-liquidity", help="Decrease liquidity from Uniswap V3 position")
+@click.argument('position_id')
+@click.option('-percent', '-p', required=True, help="Percentage of liquidity to remove, from 1 to 100")
+@click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
+@click.option('--send', '-s', is_flag=True, default=False, help="Sing and send transactions")
+@click.option('--raw', '-r', is_flag=True, default=False, help="Sing and return raw transaction")
+def remove_liquidity(position_id, percent, estimate, send, raw):
+    try:
+        manager = UniswapManager()
+        manager.remove_liquidity(int(position_id), int(percent), False if estimate else send, raw) 
+    except UniswapManagerError as e:
+        click.echo(str(e))
+        exit(1)
+
 @click.command("collect-fees", help="Collect fees from Uniswap V3 position")
 @click.argument('position_id')
 @click.option('--estimate', '-e', is_flag=True, default=False, help="Estimate transactions")
@@ -241,6 +253,7 @@ cli.add_command(positions)
 cli.add_command(price)
 cli.add_command(swap)
 cli.add_command(open_position)
+cli.add_command(remove_liquidity)
 cli.add_command(close_position)
 cli.add_command(add_liquidity)
 cli.add_command(collect_fees)
