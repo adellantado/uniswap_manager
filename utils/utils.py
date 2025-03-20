@@ -1,3 +1,4 @@
+import logging
 import subprocess
 import getpass
 import os
@@ -9,6 +10,9 @@ import click
 from web3 import Web3
 
 from entity.config import Config
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_coin_price_usd(symbol: str) -> str:
@@ -76,6 +80,7 @@ def get_private_key(wallet: str):
 def print(message: str, type: str = None):
     if not bool(Config.get_singleton().is_styles_active):
         click.secho(message)
+        logger.error(message) if type == "error" else logger.info(message)
         return
     is_bright = bool(Config.get_singleton().is_styles_bright)
     colors = {
@@ -90,6 +95,7 @@ def print(message: str, type: str = None):
         click.secho(message, fg=color)
     else:
         click.secho(message)
+    logger.error(message) if type == "error" else logger.info(message)
 
 def get_web3() -> Web3:
     config = Config.get_singleton()

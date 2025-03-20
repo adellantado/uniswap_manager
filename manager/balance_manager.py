@@ -1,3 +1,5 @@
+import logging
+
 from web3 import Web3
 from web3.exceptions import ContractLogicError  
 
@@ -5,6 +7,9 @@ from contracts.contract import Contract
 from contracts.erc20 import ERC20
 import utils.utils as utils
 from utils.decorators import to_checksum_address
+
+
+logger = logging.getLogger(__name__)
 
 
 class BalanceManager:
@@ -65,6 +70,7 @@ class BalanceManager:
                     f"{gas_price*gas_units * eth_price / 10**18:.2f}$"
                 )
             except ContractLogicError as e:
+                logging.error(f"Error: {e}")
                 utils.print("error: can't estimate gas", "warning") 
     
     def send_token(self, wallet_address: str, receiver_address: str, token: ERC20, amount: int, send: bool = False, raw: bool = False):
@@ -90,4 +96,5 @@ class BalanceManager:
                     f"{gas_price*gas_units * eth_price / 10**18:.2f}$"
                 )
             except ContractLogicError as e:
+                logging.error(f"Error: {e}")
                 utils.print("error: can't estimate gas", "warning") 

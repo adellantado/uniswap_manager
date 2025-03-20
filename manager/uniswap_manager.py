@@ -1,4 +1,4 @@
-import math
+import logging
 
 from web3.exceptions import ContractLogicError
 
@@ -15,6 +15,9 @@ from contracts.weth9 import WETH9
 from contracts.contract import Contract
 import utils.utils as utils
 from .balance_manager import BalanceManager
+
+
+logger = logging.getLogger(__name__)
 
 
 class UniswapManager:
@@ -599,6 +602,7 @@ class UniswapManager:
                     f"{gas_price*gas_units * eth_price / 10**18:.2f}$"
                 )
             except ContractLogicError as e:
+                logging.error(f"Error: {e}")
                 utils.print("error: can't estimate gas", "warning")
 
     def send_txs(self, txs: list[dict], contract: Contract, wallet_address: str):
@@ -607,6 +611,7 @@ class UniswapManager:
             tx_hash = contract.sign_and_send_tx(tx["tx"], wallet_address)
             utils.print(f"Transaction hash: {tx_hash.hex()}", "success")
             receipt = contract.get_tx_receipt(tx_hash)
+            logger.debug(f"Transaction receipt:\n{receipt}")
             # utils.print(receipt)
 
     def get_raw_txs(self, txs: list[dict], wallet_address: str):
