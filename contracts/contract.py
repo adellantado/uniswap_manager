@@ -55,6 +55,7 @@ class Contract(Cachable):
         self._sync_allowed = True
         self._sync_num_of_calls = 0
         self._nonce = None
+        self._batch = None
 
     def sync(self, num_of_calls: int=1) -> Contract:
         self._sync_num_of_calls = num_of_calls
@@ -63,10 +64,21 @@ class Contract(Cachable):
     def call_view_func(self, contract_function: str, *args) -> Any:
         cache_key = hash(tuple(args+(contract_function+'_data',)))
         if self._sync_num_of_calls > 0 or not self.__dict__.get(cache_key, None):
-            data = self.contract.functions[contract_function](*args).call()
+            contract_function_obj = self.contract.functions[contract_function](*args)
+            if self._batch:
+                self._batch.add(contract_function_obj)
+                self._batch = None
+                return self
+            data = contract_function_obj.call()
             self.__dict__[cache_key] = utils.map_contract_result(self.abi, contract_function, data)
             self._sync_num_of_calls -= 1
+        if self._batch:
+            self._batch = None
         return self.__dict__[cache_key]
+    
+    def batch_or_get_cache(self, batch) -> Contract:
+        self._batch = batch
+        return self
 
     def set_nonce(self, nonce: int) -> Contract:
         self._nonce = nonce

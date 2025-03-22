@@ -159,18 +159,20 @@ class UniswapManager:
         # lowest_price = 0
         best_quote = None
         quoter = UniswapV3QuoterV2()
+        amount_key = 'amountIn' if find_in_mode else 'amountOut'
+        batch = self.web3.batch_requests()
         for tier in PoolFee:
             pool = UniswapV3Factory.get_singleton().get_pool(
                 in_erc20.contract_address, out_erc20.contract_address, tier
             )
-
             if find_in_mode:
-                quote = quoter.quote_exact_output(pool, out_erc20, out_token_amount)
-                amount_key = 'amountIn'
+                quoter.batch_or_get_cache(batch).quote_exact_output(pool, out_erc20, out_token_amount)
             else:
-                quote = quoter.quote_exact_input(pool, in_erc20, in_token_amount)
-                amount_key = 'amountOut'
+                quoter.batch_or_get_cache(batch).quote_exact_input(pool, in_erc20, in_token_amount)
 
+        quotes = batch.execute()
+        for tier,quote in dict(zip(PoolFee, quotes)).items():
+            quote = utils.map_contract_result(quoter.abi, "quoteExactOutput" if find_in_mode else "quoteExactInput", quote)
             if best_quote is None:
                 best_quote = quote
                 fee_tier = tier.value
