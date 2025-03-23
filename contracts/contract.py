@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from typing import Any
 
 from web3 import Web3
@@ -6,6 +7,15 @@ from web3 import Web3
 import utils.utils as utils
 from entity.cachable import Cachable
 from entity.config import Config
+
+
+@dataclass
+class BatchStruct():
+    contract: Contract = None
+    func_name: str = None
+    args: list = None
+    result: Any = None
+    func_obj: Any = None
 
 
 class Contract(Cachable):
@@ -63,20 +73,28 @@ class Contract(Cachable):
 
     def call_view_func(self, contract_function: str, *args) -> Any:
         cache_key = hash(tuple(args+(contract_function+'_data',)))
+        if self._batch:
+            self._batch.func_name = contract_function
+            self._batch.args = args
+            self._batch.contract = self
         if self._sync_num_of_calls > 0 or not self.__dict__.get(cache_key, None):
             contract_function_obj = self.contract.functions[contract_function](*args)
             if self._batch:
-                self._batch.add(contract_function_obj)
+                batch = self._batch
+                self._batch.func_obj = contract_function_obj
                 self._batch = None
-                return self
+                # returns BatchStruct if we need to process the result later
+                return batch
             data = contract_function_obj.call()
             self.__dict__[cache_key] = utils.map_contract_result(self.abi, contract_function, data)
             self._sync_num_of_calls -= 1
+        result = self.__dict__[cache_key]
         if self._batch:
+            self._batch.result = result
             self._batch = None
-        return self.__dict__[cache_key]
+        return result
     
-    def batch_or_get_cache(self, batch) -> Contract:
+    def batch_or_get_cache(self, batch: BatchStruct) -> Contract:
         self._batch = batch
         return self
 

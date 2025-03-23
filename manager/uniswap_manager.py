@@ -5,6 +5,7 @@ from web3.exceptions import ContractLogicError
 from entity.uniswap_v3_position import UniswapV3Position
 from entity.pickle_cache import PickleCache
 from entity.config import Config
+from entity.batch import Batch
 from contracts.uniswap_v3_position_manager import UniswapV3PositionManager
 from contracts.uniswap_v3_router import UniswapV3Router
 from contracts.uniswap_v3_pool import PoolFee
@@ -156,23 +157,30 @@ class UniswapManager:
             find_in_mode = True
         # estimate prices and select fee tier
         fee_tier = PoolFee.FEE_TIER_100.value
-        # lowest_price = 0
         best_quote = None
         quoter = UniswapV3QuoterV2()
         amount_key = 'amountIn' if find_in_mode else 'amountOut'
-        batch = self.web3.batch_requests()
+
+        pools = []
         for tier in PoolFee:
             pool = UniswapV3Factory.get_singleton().get_pool(
                 in_erc20.contract_address, out_erc20.contract_address, tier
             )
-            if find_in_mode:
-                quoter.batch_or_get_cache(batch).quote_exact_output(pool, out_erc20, out_token_amount)
-            else:
-                quoter.batch_or_get_cache(batch).quote_exact_input(pool, in_erc20, in_token_amount)
+            pools.append(pool)
 
-        quotes = batch.execute()
+        with Batch() as batch:
+            for pool in pools:
+                if find_in_mode:
+                    batch.add(quoter.quote_exact_output,
+                        pool, out_erc20, out_token_amount
+                    )
+                else:
+                    batch.add(quoter.quote_exact_input,
+                        pool, in_erc20, in_token_amount
+                    )
+            quotes = batch.execute()
+
         for tier,quote in dict(zip(PoolFee, quotes)).items():
-            quote = utils.map_contract_result(quoter.abi, "quoteExactOutput" if find_in_mode else "quoteExactInput", quote)
             if best_quote is None:
                 best_quote = quote
                 fee_tier = tier.value

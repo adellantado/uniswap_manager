@@ -5,6 +5,7 @@ import os
 import requests
 import json
 from pathlib import Path
+from typing import Any
 
 import click
 from web3 import Web3
@@ -108,7 +109,7 @@ def load_abi(abi_name: str) -> dict:
         abi_json = json.load(f)
     return abi_json
 
-def map_contract_result(json_abi: dict, func_name: str, result) -> dict:
+def map_contract_result(json_abi: dict, func_name: str, result) -> Any:
     if type(result) is not tuple and type(result) is not list:
         return result
     field_names = []
