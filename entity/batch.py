@@ -31,9 +31,7 @@ class Batch():
             item.result = res
         self.output.append(item)
 
-    # TODO: 
-    # 1.fix for sync()
-    # 2.cache the results from the batch
+    # TODO:
     # 3.fix for @cache decorator
     def execute(self, return_items: bool = False):
         queue = list(filter(lambda item: item.result is None, self.output))
@@ -43,6 +41,10 @@ class Batch():
             for i, data in enumerate(res):
                 item = cast(BatchStruct, queue[i])
                 item.result = utils.map_contract_result(item.contract.abi, item.func_name, data)
+                # add to contract's cache
+                cache_key = hash(tuple(item.args+(item.func_name+'_data',)))
+                item.contract.__dict__[cache_key] = item.result
+                item.contract._sync_num_of_calls -= 1
         if return_items:
             return self.output
         return list(map(lambda item: item.result, self.output))

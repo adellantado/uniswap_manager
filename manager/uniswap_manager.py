@@ -61,6 +61,15 @@ class UniswapManager:
             positions_per_address = {}
             if wallet_address not in all_positions:
                 all_positions[wallet_address] = positions_per_address
+
+            # preload position data functions to cache with batch
+            with Batch() as batch:
+                for position_id in position_ids:
+                    # preload position data for new positions or if there is a need to refresh data
+                    if position_id not in all_positions[wallet_address] or refresh_data:
+                        batch.add(self.position_manager.sync().get_position_data, position_id)
+                batch.execute()
+
             for position_id in position_ids:
                 if position_id not in all_positions[wallet_address]:
                     position = UniswapV3Position.get_instance(
@@ -79,8 +88,25 @@ class UniswapManager:
                         position_data["fee"],
                     )
                 if refresh_data:
-                    position.refresh()
+                    #comment due to batch preloading
+                    #position.refresh()
+                    position.position_data = self.position_manager.get_position_data(position_id)
                 positions_per_address[position_id] = position
+
+            # preload pool functions to cache with batch
+            with Batch() as batch:
+                checked_pools = []
+                for _, position in positions_per_address.items():
+                    if position.pool in checked_pools:
+                        continue
+                    batch.add(position.pool.get_slot0)
+                    batch.add(position.pool.get_feeGrowthGlobal0X128)
+                    batch.add(position.pool.get_feeGrowthGlobal1X128)
+                    batch.add(position.pool.get_ticks, position.position_data['tickLower'])
+                    batch.add(position.pool.get_ticks, position.position_data['tickUpper'])
+                    checked_pools.append(position.pool)
+                batch.execute()
+                
             all_positions[wallet_address] = positions_per_address
         # cache positions
         if resave_file:
@@ -89,7 +115,7 @@ class UniswapManager:
         return all_positions
 
     def print_positions(self):
-        all_positions = self.get_list_of_positions()
+        all_positions = self.get_list_of_positions(refresh_data=True)
         for wallet_address, positions in all_positions.items():
             if wallet_address not in self.config.wallet_addresses.values():
                 continue
@@ -203,6 +229,13 @@ class UniswapManager:
             in_token_amount = best_quote[amount_key]
         else:
             out_token_amount = best_quote[amount_key]
+        # preload view functions to cache with batch
+        router = UniswapV3Router.get_singleton()
+        if not use_eth:
+            with Batch() as batch:
+                batch.add(in_erc20.get_balance, wallet_address)
+                batch.add(in_erc20.get_allowance, wallet_address, router.contract_address)
+                batch.execute()
         # check balance
         balance_manager = BalanceManager()
         if use_eth:
@@ -217,7 +250,6 @@ class UniswapManager:
                 txs.append(deposit_weth_tx)
                 nonce += 1
         # check allowance
-        router = UniswapV3Router.get_singleton()
         if not use_eth:
             allow_tx = self.check_allowance_and_approve(
                 router, in_erc20, in_token_amount, wallet_address, nonce
@@ -282,6 +314,20 @@ class UniswapManager:
         if use_eth and (token0.get_symbol() != "WETH" and token1.get_symbol() != "WETH"):
             raise UniswapManagerError("Input or output token must be WETH to use ETH")
         wallet_address = str(self.web3.to_checksum_address(wallet_address))
+        # preload view functions
+        is_eth_native_0 = use_eth and token0.get_symbol() == "WETH"
+        is_eth_native_1 = use_eth and token1.get_symbol() == "WETH"
+        position_manager = UniswapV3PositionManager.get_singleton()
+        with Batch() as batch:
+            if not is_eth_native_0:
+                batch.add(token0.get_balance, wallet_address)
+                batch.add(token0.get_allowance, wallet_address, position_manager.contract_address)
+            if not is_eth_native_1:
+                batch.add(token1.get_balance, wallet_address)
+                batch.add(token1.get_allowance, wallet_address, position_manager.contract_address)
+            batch.add(position_manager.get_all_position_last_index, wallet_address)
+            batch.execute()
+
         txs = []
         nonce = token0.get_nonce(wallet_address)
         # check balance
@@ -290,14 +336,14 @@ class UniswapManager:
             eth_balance = balance_manager.get_eth_balance(wallet_address)
             if eth_balance < amount0:
                 raise UniswapManagerError(f"Insufficient balance: {eth_balance} ETH")
-        if not use_eth or token0.get_symbol() != "WETH":
+        if not is_eth_native_0:
             deposit_weth_tx = self.check_balance_and_deposit_token(
                 balance_manager, token0, wallet_address, amount0, nonce
             )
             if deposit_weth_tx is not None:
                 txs.append(deposit_weth_tx)
                 nonce += 1
-        if not use_eth or token1.get_symbol() != "WETH":
+        if not is_eth_native_1:
             deposit_weth_tx = self.check_balance_and_deposit_token(
                 balance_manager, token1, wallet_address, amount1, nonce
             )
@@ -305,15 +351,14 @@ class UniswapManager:
                 txs.append(deposit_weth_tx)
                 nonce += 1
         # check allowance
-        position_manager = UniswapV3PositionManager.get_singleton()
-        if not use_eth or token0.get_symbol() != "WETH":
+        if not is_eth_native_0:
             allow_tx = self.check_allowance_and_approve(
                 position_manager, token0, amount0, wallet_address, nonce
             )
             if allow_tx is not None:
                 txs.append(allow_tx)
                 nonce += 1
-        if not use_eth or token1.get_symbol() != "WETH":
+        if not is_eth_native_1:
             allow_tx = self.check_allowance_and_approve(
                 position_manager, token1, amount1, wallet_address, nonce
             )
@@ -464,6 +509,19 @@ class UniswapManager:
                 f"but you set {token0.get_symbol()} and {token1.get_symbol()}"
             )
         wallet_address = str(self.web3.to_checksum_address(wallet_address))
+        # preload view functions
+        is_eth_native_0 = use_eth and token0.get_symbol() == "WETH"
+        is_eth_native_1 = use_eth and token1.get_symbol() == "WETH"
+        position_manager = UniswapV3PositionManager.get_singleton()
+        with Batch() as batch:
+            if not is_eth_native_0:
+                batch.add(token0.get_balance, wallet_address)
+                batch.add(token0.get_allowance, wallet_address, position_manager.contract_address)
+            if not is_eth_native_1:
+                batch.add(token1.get_balance, wallet_address)
+                batch.add(token1.get_allowance, wallet_address, position_manager.contract_address)
+            batch.execute()
+
         txs = []
         nonce = token0.get_nonce(wallet_address)
         # check balance
@@ -472,14 +530,14 @@ class UniswapManager:
             eth_balance = balance_manager.get_eth_balance(wallet_address)
             if eth_balance < amount0:
                 raise UniswapManagerError(f"Insufficient balance: {eth_balance} ETH")
-        if not use_eth or token0.get_symbol() != "WETH":
+        if not is_eth_native_0:
             deposit_weth_tx = self.check_balance_and_deposit_token(
                 balance_manager, token0, wallet_address, amount0, nonce
             )
             if deposit_weth_tx is not None:
                 txs.append(deposit_weth_tx)
                 nonce += 1
-        if not use_eth or token1.get_symbol() != "WETH":
+        if not is_eth_native_1:
             deposit_weth_tx = self.check_balance_and_deposit_token(
                 balance_manager, token1, wallet_address, amount1, nonce
             )
@@ -487,15 +545,14 @@ class UniswapManager:
                 txs.append(deposit_weth_tx)
                 nonce += 1
         # check allowance
-        position_manager = UniswapV3PositionManager.get_singleton()
-        if not use_eth or token0.get_symbol() != "WETH":
+        if not is_eth_native_0:
             allow_tx = self.check_allowance_and_approve(
                 position_manager, token0, amount0, wallet_address, nonce
             )
             if allow_tx is not None:
                 txs.append(allow_tx)
                 nonce += 1
-        if not use_eth or token1.get_symbol() != "WETH":
+        if not is_eth_native_1:
             allow_tx = self.check_allowance_and_approve(
                 position_manager, token1, amount1, wallet_address, nonce
             )
